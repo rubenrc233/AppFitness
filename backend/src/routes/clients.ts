@@ -8,23 +8,69 @@ const router = Router();
 // Get all clients (admin only) with review info
 router.get('/', authenticateToken, isAdmin, async (req: AuthRequest, res: Response) => {
   try {
+    const { pending } = req.query;
+    
+    let whereClause = 'WHERE u.role = "client"';
+    if (pending === 'true') {
+      whereClause += ' AND u.is_approved = FALSE';
+    }
+    
     const [clients] = await pool.query<RowDataPacket[]>(`
       SELECT 
         u.id, 
         u.name, 
         u.email, 
         u.created_at,
+        u.is_approved,
         ps.next_due_date,
         COALESCE(ps.is_enabled, 0) as is_enabled
       FROM users u
       LEFT JOIN progress_settings ps ON u.id = ps.client_id
-      WHERE u.role = 'client'
-      ORDER BY u.created_at DESC
+      ${whereClause}
+      ORDER BY u.is_approved ASC, u.created_at DESC
     `);
     res.json({ clients });
   } catch (error) {
     console.error('Get clients error:', error);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Aprobar cliente (admin only)
+router.post('/:clientId/approve', authenticateToken, isAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { clientId } = req.params;
+    
+    await pool.query('UPDATE users SET is_approved = TRUE WHERE id = ?', [clientId]);
+    
+    res.json({ message: 'Cliente aprobado correctamente' });
+  } catch (error) {
+    console.error('Approve client error:', error);
+    res.status(500).json({ error: 'Error al aprobar cliente' });
+  }
+});
+
+// Rechazar/eliminar cliente pendiente (admin only)
+router.delete('/:clientId/reject', authenticateToken, isAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { clientId } = req.params;
+    
+    // Solo permitir eliminar si no está aprobado
+    const [users] = await pool.query<RowDataPacket[]>(
+      'SELECT is_approved FROM users WHERE id = ?',
+      [clientId]
+    );
+    
+    if (users.length > 0 && users[0].is_approved) {
+      return res.status(400).json({ error: 'No se puede rechazar un cliente ya aprobado' });
+    }
+    
+    await pool.query('DELETE FROM users WHERE id = ? AND is_approved = FALSE', [clientId]);
+    
+    res.json({ message: 'Solicitud rechazada' });
+  } catch (error) {
+    console.error('Reject client error:', error);
+    res.status(500).json({ error: 'Error al rechazar cliente' });
   }
 });
 

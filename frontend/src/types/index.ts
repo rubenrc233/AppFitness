@@ -3,6 +3,7 @@ export interface User {
   name: string;
   email: string;
   role: 'admin' | 'client';
+  is_approved?: boolean;
 }
 
 export interface Client {
@@ -12,6 +13,7 @@ export interface Client {
   created_at: string;
   next_due_date?: string;
   is_enabled?: boolean; // false = bloqueado
+  is_approved?: boolean;
 }
 
 export interface Meal {

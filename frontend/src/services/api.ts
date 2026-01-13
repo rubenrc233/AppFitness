@@ -62,13 +62,24 @@ export const authService = {
 };
 
 export const clientService = {
-  getClients: async () => {
-    const response = await api.get('/clients');
+  getClients: async (pending?: boolean) => {
+    const params = pending ? { pending: 'true' } : {};
+    const response = await api.get('/clients', { params });
     return response.data;
   },
 
   getClientDetails: async (clientId: number) => {
     const response = await api.get(`/clients/${clientId}`);
+    return response.data;
+  },
+
+  approveClient: async (clientId: number) => {
+    const response = await api.post(`/clients/${clientId}/approve`);
+    return response.data;
+  },
+
+  rejectClient: async (clientId: number) => {
+    const response = await api.delete(`/clients/${clientId}/reject`);
     return response.data;
   },
 };

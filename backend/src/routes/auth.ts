@@ -29,10 +29,14 @@ router.post('/register', async (req: Request, res: Response) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Clientes nuevos no están aprobados, admins sí
+    const userRole = role || 'client';
+    const isApproved = userRole === 'admin' ? true : false;
+
     // Insert user
     const [result] = await pool.query(
-      'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-      [name, email, hashedPassword, role || 'client']
+      'INSERT INTO users (name, email, password, role, is_approved) VALUES (?, ?, ?, ?, ?)',
+      [name, email, hashedPassword, userRole, isApproved]
     );
 
     const insertResult = result as any;
@@ -52,7 +56,8 @@ router.post('/register', async (req: Request, res: Response) => {
         id: userId,
         name,
         email,
-        role: role || 'client'
+        role: userRole,
+        is_approved: isApproved
       }
     });
   } catch (error) {
@@ -72,7 +77,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     // Find user
     const [users] = await pool.query(
-      'SELECT id, name, email, password, role FROM users WHERE email = ?',
+      'SELECT id, name, email, password, role, is_approved FROM users WHERE email = ?',
       [email]
     );
 
@@ -103,7 +108,8 @@ router.post('/login', async (req: Request, res: Response) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        is_approved: user.is_approved
       }
     });
   } catch (error) {
@@ -116,7 +122,7 @@ router.post('/login', async (req: Request, res: Response) => {
 router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const [users] = await pool.query(
-      'SELECT id, name, email, role FROM users WHERE id = ?',
+      'SELECT id, name, email, role, is_approved FROM users WHERE id = ?',
       [req.userId]
     );
 

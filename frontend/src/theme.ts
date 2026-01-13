@@ -28,6 +28,8 @@ export const palette = {
   // Estados
   success: '#22C55E',
   danger: '#EF4444',
+  warning: '#F59E0B',
+  warningMuted: 'rgba(245, 158, 11, 0.15)',
 };
 
 export const radius = {

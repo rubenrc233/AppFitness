@@ -135,7 +135,8 @@ export default function DietManagementScreen({ route, navigation }: any) {
       }
       
       resetSupplementForm();
-      loadSupplements();
+      await loadSupplements();
+      // No cerramos el modal para poder añadir más suplementos
     } catch (error) {
       showError('Error', 'No se pudo guardar el suplemento');
     }
@@ -1088,17 +1089,22 @@ export default function DietManagementScreen({ route, navigation }: any) {
         </View>
       </Modal>
 
-      {/* Botón flotante de suplementación */}
+      {/* Botón de suplementación */}
       <TouchableOpacity 
-        style={styles.supplementsFab}
+        style={styles.supplementsButton}
         onPress={() => setShowSupplementsModal(true)}
       >
-        <Ionicons name="medical" size={24} color="#fff" />
-        {supplements.length > 0 && (
-          <View style={styles.supplementsBadge}>
-            <Text style={styles.supplementsBadgeText}>{supplements.length}</Text>
+        <View style={styles.supplementsButtonContent}>
+          <View style={styles.supplementsButtonTextContainer}>
+            <Text style={styles.supplementsButtonTitle}>Suplementación</Text>
+            <Text style={styles.supplementsButtonSubtitle}>
+              {supplements.length === 0 
+                ? 'Añadir suplementos' 
+                : `${supplements.length} suplemento${supplements.length > 1 ? 's' : ''}`}
+            </Text>
           </View>
-        )}
+          <Ionicons name="chevron-forward" size={20} color={palette.muted} />
+        </View>
       </TouchableOpacity>
 
       {/* Custom Alert */}
@@ -2227,38 +2233,42 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   // Estilos de Suplementación
-  supplementsFab: {
+  supplementsButton: {
     position: 'absolute',
-    right: 20,
+    left: 16,
+    right: 16,
     bottom: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#9C27B0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
+    backgroundColor: palette.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: palette.border,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   },
-  supplementsBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: palette.primary,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
+  supplementsButtonContent: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    padding: spacing.md,
   },
-  supplementsBadgeText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: 'bold',
+  supplementsButtonIcon: {
+    fontSize: 28,
+    marginRight: spacing.md,
+  },
+  supplementsButtonTextContainer: {
+    flex: 1,
+  },
+  supplementsButtonTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: palette.text,
+  },
+  supplementsButtonSubtitle: {
+    fontSize: 13,
+    color: palette.muted,
+    marginTop: 2,
   },
   supplementModalOverlay: {
     flex: 1,

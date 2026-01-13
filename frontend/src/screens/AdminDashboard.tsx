@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, TextInput } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, TextInput, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { clientService } from '../services/api';
 import { Client } from '../types';
@@ -8,22 +8,27 @@ import { palette, spacing, radius, typography } from '../theme';
 import CustomAlert, { useCustomAlert } from '../components/CustomAlert';
 
 type SortType = 'alphabetic' | 'review';
+type TabType = 'clients' | 'pending';
 
 export default function AdminDashboard({ navigation }: any) {
   const [clients, setClients] = useState<Client[]>([]);
+  const [pendingClients, setPendingClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortType, setSortType] = useState<SortType>('alphabetic');
+  const [activeTab, setActiveTab] = useState<TabType>('clients');
   const { user, signOut } = useAuth();
-  const { alertState, hideAlert, showError, showConfirm } = useCustomAlert();
+  const { alertState, hideAlert, showError, showConfirm, showSuccess } = useCustomAlert();
 
   useEffect(() => {
     loadClients();
+    loadPendingClients();
   }, []);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       loadClients();
+      loadPendingClients();
     });
     return unsubscribe;
   }, [navigation]);
@@ -38,6 +43,48 @@ export default function AdminDashboard({ navigation }: any) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadPendingClients = async () => {
+    try {
+      const data = await clientService.getClients(true);
+      setPendingClients(data.clients);
+    } catch (error: any) {
+      console.error('Error loading pending clients:', error);
+    }
+  };
+
+  const handleApproveClient = (client: Client) => {
+    showConfirm(
+      'Aprobar Cliente',
+      `¿Aprobar a ${client.name} como cliente?`,
+      async () => {
+        try {
+          await clientService.approveClient(client.id);
+          showSuccess('¡Aprobado!', `${client.name} ahora es un cliente activo`);
+          loadClients();
+          loadPendingClients();
+        } catch (error) {
+          showError('Error', 'No se pudo aprobar al cliente');
+        }
+      }
+    );
+  };
+
+  const handleRejectClient = (client: Client) => {
+    showConfirm(
+      'Rechazar Solicitud',
+      `¿Rechazar la solicitud de ${client.name}? Se eliminará su cuenta.`,
+      async () => {
+        try {
+          await clientService.rejectClient(client.id);
+          showSuccess('Rechazado', 'La solicitud ha sido rechazada');
+          loadPendingClients();
+        } catch (error) {
+          showError('Error', 'No se pudo rechazar la solicitud');
+        }
+      }
+    );
   };
 
   const handleLogout = () => {
@@ -112,6 +159,7 @@ export default function AdminDashboard({ navigation }: any) {
 
   const activeCount = clients.filter(c => c.is_enabled !== false).length;
   const blockedCount = clients.filter(c => c.is_enabled === false).length;
+  const pendingCount = pendingClients.length;
 
   return (
     <View style={styles.container}>
@@ -133,24 +181,61 @@ export default function AdminDashboard({ navigation }: any) {
         </View>
       </View>
 
-      <View style={styles.content}>
-        {/* Buscador */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color={palette.muted} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar cliente..."
-            placeholderTextColor={palette.mutedAlt}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            selectionColor={palette.primary}
+      {/* Tabs */}
+      <View style={styles.tabsContainer}>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'clients' && styles.tabActive]}
+          onPress={() => setActiveTab('clients')}
+        >
+          <Ionicons 
+            name="people" 
+            size={18} 
+            color={activeTab === 'clients' ? palette.primary : palette.muted} 
           />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color={palette.muted} />
-            </TouchableOpacity>
+          <Text style={[styles.tabText, activeTab === 'clients' && styles.tabTextActive]}>
+            Clientes
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'pending' && styles.tabActive]}
+          onPress={() => setActiveTab('pending')}
+        >
+          <Ionicons 
+            name="hourglass-outline" 
+            size={18} 
+            color={activeTab === 'pending' ? palette.primary : palette.muted} 
+          />
+          <Text style={[styles.tabText, activeTab === 'pending' && styles.tabTextActive]}>
+            Pendientes
+          </Text>
+          {pendingCount > 0 && (
+            <View style={styles.pendingBadge}>
+              <Text style={styles.pendingBadgeText}>{pendingCount}</Text>
+            </View>
           )}
-        </View>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.content}>
+        {activeTab === 'clients' ? (
+          <>
+            {/* Buscador */}
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color={palette.muted} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar cliente..."
+                placeholderTextColor={palette.mutedAlt}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                selectionColor={palette.primary}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color={palette.muted} />
+                </TouchableOpacity>
+              )}
+            </View>
 
         {/* Filtros */}
         <View style={styles.filterContainer}>
@@ -263,6 +348,66 @@ export default function AdminDashboard({ navigation }: any) {
             </View>
           }
         />
+          </>
+        ) : (
+          /* Tab de Pendientes */
+          <>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderLeft}>
+                <Ionicons name="hourglass-outline" size={20} color={palette.warning} />
+                <Text style={styles.sectionTitle}>Solicitudes Pendientes</Text>
+              </View>
+            </View>
+
+            <FlatList
+              data={pendingClients}
+              keyExtractor={(item) => item.id.toString()}
+              refreshControl={
+                <RefreshControl 
+                  refreshing={loading} 
+                  onRefresh={() => { loadClients(); loadPendingClients(); }}
+                  tintColor={palette.primary}
+                />
+              }
+              renderItem={({ item }) => (
+                <View style={styles.pendingCard}>
+                  <View style={styles.pendingCardHeader}>
+                    <View style={styles.pendingAvatar}>
+                      <Ionicons name="person-add" size={22} color={palette.warning} />
+                    </View>
+                    <View style={styles.pendingInfo}>
+                      <Text style={styles.pendingName}>{item.name}</Text>
+                      <Text style={styles.pendingEmail}>{item.email}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.pendingActions}>
+                    <TouchableOpacity 
+                      style={styles.rejectButton}
+                      onPress={() => handleRejectClient(item)}
+                    >
+                      <Ionicons name="close" size={20} color={palette.danger} />
+                      <Text style={styles.rejectText}>Rechazar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.approveButton}
+                      onPress={() => handleApproveClient(item)}
+                    >
+                      <Ionicons name="checkmark" size={20} color="#fff" />
+                      <Text style={styles.approveText}>Aprobar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="checkmark-circle-outline" size={48} color={palette.success} />
+                  <Text style={styles.emptyText}>No hay solicitudes pendientes</Text>
+                  <Text style={styles.emptySubtext}>Todas las solicitudes han sido procesadas</Text>
+                </View>
+              }
+            />
+          </>
+        )}
       </View>
 
       {/* Custom Alert */}
@@ -470,5 +615,127 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: palette.muted,
     marginTop: spacing.md,
+  },
+  emptySubtext: {
+    fontSize: 13,
+    color: palette.mutedAlt,
+    marginTop: spacing.xs,
+  },
+  // Tabs
+  tabsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: palette.surface,
+    gap: spacing.xs,
+  },
+  tabActive: {
+    backgroundColor: palette.primaryMuted,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: palette.muted,
+  },
+  tabTextActive: {
+    color: palette.primary,
+    fontWeight: '600',
+  },
+  pendingBadge: {
+    backgroundColor: palette.warning,
+    borderRadius: radius.full,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  pendingBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  // Pending cards
+  pendingCard: {
+    backgroundColor: palette.surface,
+    borderRadius: radius.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: palette.border,
+    borderLeftWidth: 3,
+    borderLeftColor: palette.warning,
+    overflow: 'hidden',
+  },
+  pendingCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+  },
+  pendingAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: palette.warningMuted,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  pendingInfo: {
+    flex: 1,
+  },
+  pendingName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: palette.text,
+  },
+  pendingEmail: {
+    fontSize: 13,
+    color: palette.muted,
+    marginTop: 2,
+  },
+  pendingActions: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: palette.border,
+  },
+  rejectButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm + 2,
+    gap: spacing.xs,
+    backgroundColor: palette.surfaceAlt,
+  },
+  rejectText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: palette.danger,
+  },
+  approveButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm + 2,
+    gap: spacing.xs,
+    backgroundColor: palette.success,
+  },
+  approveText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

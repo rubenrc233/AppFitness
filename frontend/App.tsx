@@ -14,6 +14,7 @@ import RoutineManagementScreen from './src/screens/RoutineManagementScreen';
 import DietManagementScreen from './src/screens/DietManagementScreen';
 import ProgressHistoryScreen from './src/screens/ProgressHistoryScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import PendingApprovalScreen from './src/screens/PendingApprovalScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -48,6 +49,10 @@ function Navigation() {
             }}
           />
           <Stack.Screen name="Settings" component={SettingsScreen} />
+        </Stack.Navigator>
+      ) : user.is_approved === false ? (
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="PendingApproval" component={PendingApprovalScreen} />
         </Stack.Navigator>
       ) : (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
