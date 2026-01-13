@@ -1,15 +1,15 @@
-// Shared design tokens - Minimal & Elegant "Incinerador" aesthetic
+// Shared design tokens - Minimal & Elegant dark aesthetic
 export const palette = {
-  // Fondos con tinte rojizo equilibrado
-  background: '#100D0D',
-  surface: '#1A1515',
-  surfaceAlt: '#221B1B',
-  surfaceHighlight: '#2A2222',
-  inputBg: '#1E1818',
+  // Fondos oscuros neutros
+  background: '#0F0F0F',
+  surface: '#1A1A1A',
+  surfaceAlt: '#242424',
+  surfaceHighlight: '#2E2E2E',
+  inputBg: '#1E1E1E',
   
-  // Bordes con calidez rojiza
-  border: '#362929',
-  borderLight: '#453535',
+  // Bordes neutros
+  border: '#333333',
+  borderLight: '#404040',
   
   // Colores principales
   primary: '#E85D04',
@@ -20,10 +20,10 @@ export const palette = {
   accentMuted: '#D6282840',
   
   // Texto
-  text: '#FAF7F5',
+  text: '#FAFAFA',
   textWarm: '#FFE4D6',
-  muted: '#A18F8F',
-  mutedAlt: '#645656',
+  muted: '#999999',
+  mutedAlt: '#666666',
   
   // Estados
   success: '#22C55E',

@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import LoadingScreen from '../components/LoadingScreen';
+import AppHeader from '../components/AppHeader';
 import { LineChart } from 'react-native-chart-kit';
 import { progressService } from '../services/api';
 import { ProgressStatus, ProgressUpdate } from '../types';
@@ -215,18 +216,8 @@ export default function ClientProgressScreen({ clientId }: Props) {
 
   return (
     <View style={styles.container}>
+      <AppHeader title="Mi Progreso" />
       <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Mi Progreso</Text>
-          <Text style={styles.subtitle}>
-            {status?.canUpload 
-              ? 'Actualiza tu progreso' 
-              : `Próxima: ${status?.nextDueDate 
-                  ? new Date(status.nextDueDate).toLocaleDateString('es-ES')
-                  : 'No configurada'}`
-            }
-          </Text>
-        </View>
 
         {chartData && history.length >= 2 && (
           <View style={styles.chartSection}>
@@ -422,7 +413,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: spacing.lg,
-    paddingTop: 54,
+    paddingTop: spacing.md,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: palette.border,

@@ -20,21 +20,20 @@ interface Props {
 }
 
 export default function WorkoutScreen({ route, navigation }: Props) {
-  const { clientId, dayId, dayIndex } = route.params;
+  const { clientId, dayId, dayIndex, dayName } = route.params;
 
   const [exercises, setExercises] = useState<DayExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentWeights, setCurrentWeights] = useState<{ [exerciseId: number]: { [setNum: number]: string } }>({});
   const [previousWeights, setPreviousWeights] = useState<{ [exerciseId: number]: { [setNum: number]: number } }>({});
   const [workoutSeconds, setWorkoutSeconds] = useState(0);
-  const [workoutStarted, setWorkoutStarted] = useState(false);
+  const [workoutStarted, setWorkoutStarted] = useState(true);
   const [restSeconds, setRestSeconds] = useState(0);
   const [restRunning, setRestRunning] = useState(false);
   const [finishModalVisible, setFinishModalVisible] = useState(false);
 
   useEffect(() => {
     loadWorkout();
-    setWorkoutStarted(true);
   }, []);
 
   useEffect(() => {
@@ -127,6 +126,10 @@ export default function WorkoutScreen({ route, navigation }: Props) {
     setRestRunning(false);
   };
 
+  const handleStartWorkout = () => {
+    setWorkoutStarted(true);
+  };
+
   const handleFinishWorkout = async () => {
     try {
       const exercisesData = exercises.map((exercise) => ({
@@ -158,42 +161,44 @@ export default function WorkoutScreen({ route, navigation }: Props) {
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Entrenamiento</Text>
           <View style={styles.headerBadge}>
-            <Text style={styles.headerBadgeText}>Día {dayIndex + 1}</Text>
+            <Text style={styles.headerBadgeText}>{dayName || `Día ${dayIndex + 1}`}</Text>
           </View>
         </View>
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Timers */}
-      <View style={styles.timersRow}>
-        <View style={[styles.timerContainer, styles.timerMain]}>
-          <View style={styles.timerIconContainer}>
-            <Ionicons name="flame" size={22} color={palette.primary} />
+      {/* Timers - Solo visibles cuando el entrenamiento ha comenzado */}
+      {workoutStarted && (
+        <View style={styles.timersRow}>
+          <View style={[styles.timerContainer, styles.timerMain]}>
+            <View style={styles.timerIconContainer}>
+              <Ionicons name="flame" size={22} color={palette.primary} />
+            </View>
+            <View style={styles.timerContent}>
+              <Text style={styles.timerLabel}>TIEMPO ACTIVO</Text>
+              <Text style={styles.timerDisplayMain}>{formatTime(workoutSeconds)}</Text>
+            </View>
           </View>
-          <View style={styles.timerContent}>
-            <Text style={styles.timerLabel}>TIEMPO ACTIVO</Text>
-            <Text style={styles.timerDisplayMain}>{formatTime(workoutSeconds)}</Text>
-          </View>
-        </View>
 
-        <View style={styles.timerContainer}>
-          <View style={styles.timerContentRest}>
-            <Text style={styles.timerLabelRest}>DESCANSO</Text>
-            <Text style={styles.timerDisplayRest}>{formatRestTime(restSeconds)}</Text>
-          </View>
-          <View style={styles.timerControls}>
-            <TouchableOpacity 
-              onPress={toggleRestTimer} 
-              style={[styles.timerButton, restRunning && styles.timerButtonActive]}
-            >
-              <Ionicons name={restRunning ? 'pause' : 'play'} size={18} color={restRunning ? palette.text : palette.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={resetRestTimer} style={styles.timerButtonReset}>
-              <Ionicons name="refresh" size={16} color={palette.muted} />
-            </TouchableOpacity>
+          <View style={styles.timerContainer}>
+            <View style={styles.timerContentRest}>
+              <Text style={styles.timerLabelRest}>DESCANSO</Text>
+              <Text style={styles.timerDisplayRest}>{formatRestTime(restSeconds)}</Text>
+            </View>
+            <View style={styles.timerControls}>
+              <TouchableOpacity 
+                onPress={toggleRestTimer} 
+                style={[styles.timerButton, restRunning && styles.timerButtonActive]}
+              >
+                <Ionicons name={restRunning ? 'pause' : 'play'} size={18} color={restRunning ? palette.text : palette.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={resetRestTimer} style={styles.timerButtonReset}>
+                <Ionicons name="refresh" size={16} color={palette.muted} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
+      )}
 
       {/* Exercise List */}
       <ScrollView style={styles.exercisesList} showsVerticalScrollIndicator={false}>
@@ -261,11 +266,18 @@ export default function WorkoutScreen({ route, navigation }: Props) {
           </View>
         ))}
 
-        {/* Finish Button */}
-        <TouchableOpacity style={styles.finishButton} onPress={handleFinishWorkoutPress}>
-          <Ionicons name="checkmark-circle" size={22} color={palette.text} />
-          <Text style={styles.finishButtonText}>Terminar Entrenamiento</Text>
-        </TouchableOpacity>
+        {/* Start/Finish Button */}
+        {!workoutStarted ? (
+          <TouchableOpacity style={styles.startButton} onPress={handleStartWorkout}>
+            <Ionicons name="play-circle" size={24} color={palette.text} />
+            <Text style={styles.startButtonText}>Comenzar Entrenamiento</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.finishButton} onPress={handleFinishWorkoutPress}>
+            <Ionicons name="checkmark-circle" size={22} color={palette.text} />
+            <Text style={styles.finishButtonText}>Terminar Entrenamiento</Text>
+          </TouchableOpacity>
+        )}
         
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -577,6 +589,21 @@ const styles = StyleSheet.create({
   weightInputFilled: {
     borderColor: palette.primary,
     backgroundColor: palette.primaryGlow,
+  },
+  startButton: {
+    backgroundColor: palette.success,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+    borderRadius: radius.md,
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  startButtonText: {
+    color: palette.text,
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   finishButton: {
     backgroundColor: palette.primary,

@@ -157,8 +157,8 @@ export const routineService = {
     return response.data;
   },
 
-  // Actualizar día (nombre y notas)
-  updateDay: async (dayId: number, data: { name: string; custom_name?: string | null; notes?: string }) => {
+  // Actualizar día (nombre, notas y weekday)
+  updateDay: async (dayId: number, data: { name: string; custom_name?: string | null; notes?: string; weekday?: number }) => {
     const response = await api.put(`/routines/days/${dayId}`, data);
     return response.data;
   },

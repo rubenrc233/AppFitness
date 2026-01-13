@@ -60,7 +60,7 @@ router.get('/:clientId', authenticateToken, async (req, res) => {
     
     // Obtener días de la rutina
     const [days] = await pool.query<RowDataPacket[]>(
-      'SELECT id, routine_id, day_number, COALESCE(custom_name, name) as name, notes FROM routine_days WHERE routine_id = ? ORDER BY day_number',
+      'SELECT id, routine_id, day_number, weekday, COALESCE(custom_name, name) as name, custom_name, notes FROM routine_days WHERE routine_id = ? ORDER BY weekday, day_number',
       [routine.id]
     );
     
@@ -101,8 +101,8 @@ router.post('/:clientId', authenticateToken, async (req, res) => {
     // Crear días vacíos automáticamente
     for (let i = 1; i <= totalDays; i++) {
       await connection.query(
-        'INSERT INTO routine_days (routine_id, day_number, name, notes) VALUES (?, ?, ?, ?)',
-        [routineId, i, `Día ${i}`, '']
+        'INSERT INTO routine_days (routine_id, day_number, weekday, name, notes) VALUES (?, ?, ?, ?, ?)',
+        [routineId, i, i - 1, `Día ${i}`, '']
       );
     }
     
@@ -171,16 +171,23 @@ router.get('/days/:dayId', authenticateToken, async (req, res) => {
   }
 });
 
-// Actualizar día (nombre y notas)
+// Actualizar día (nombre, notas y weekday)
 router.put('/days/:dayId', authenticateToken, async (req, res) => {
   try {
     const { dayId } = req.params;
-    const { name, notes, custom_name } = req.body;
+    const { name, notes, custom_name, weekday } = req.body;
     
-    await pool.query(
-      'UPDATE routine_days SET name = ?, notes = ?, custom_name = ? WHERE id = ?',
-      [name, notes || '', custom_name || null, dayId]
-    );
+    if (weekday !== undefined) {
+      await pool.query(
+        'UPDATE routine_days SET name = ?, notes = ?, custom_name = ?, weekday = ? WHERE id = ?',
+        [name, notes || '', custom_name || null, weekday, dayId]
+      );
+    } else {
+      await pool.query(
+        'UPDATE routine_days SET name = ?, notes = ?, custom_name = ? WHERE id = ?',
+        [name, notes || '', custom_name || null, dayId]
+      );
+    }
     
     res.json({ message: 'Día actualizado' });
   } catch (error) {

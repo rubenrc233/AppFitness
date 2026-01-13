@@ -46,9 +46,12 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
   const [addExerciseModalVisible, setAddExerciseModalVisible] = useState(false);
   const [createExerciseModalVisible, setCreateExerciseModalVisible] = useState(false);
 
+  // Días de la semana
+  const WEEKDAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
   // Wizard states
   const [wizardRoutineName, setWizardRoutineName] = useState('');
-  const [wizardTotalDays, setWizardTotalDays] = useState(5);
+  const [wizardSelectedWeekdays, setWizardSelectedWeekdays] = useState<number[]>([]);
   const [wizardDayNames, setWizardDayNames] = useState<string[]>([]);
   const [wizardDayExercises, setWizardDayExercises] = useState<{ [key: number]: any[] }>({});
   const [wizardCurrentDay, setWizardCurrentDay] = useState(0);
@@ -63,6 +66,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
 
   // Selected day states
   const [selectedDay, setSelectedDay] = useState<RoutineDay | null>(null);
+  const [selectedDayWeekday, setSelectedDayWeekday] = useState<number>(0);
   const [dayExercises, setDayExercises] = useState<DayExercise[]>([]);
   const [dayNotes, setDayNotes] = useState('');
 
@@ -140,7 +144,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
     setWizardVisible(true);
     setWizardStep(1);
     setWizardRoutineName('');
-    setWizardTotalDays(5);
+    setWizardSelectedWeekdays([]);
     setWizardDayNames([]);
     setWizardDayExercises({});
     setWizardCurrentDay(0);
@@ -156,7 +160,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
         setWizardVisible(false);
         setWizardStep(1);
         setWizardRoutineName('');
-        setWizardTotalDays(5);
+        setWizardSelectedWeekdays([]);
         setWizardDayNames([]);
         setWizardDayExercises({});
         setWizardCurrentDay(0);
@@ -173,11 +177,18 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
         showError('Error', 'El nombre de la rutina es requerido');
         return;
       }
-      // Inicializar nombres de días
-      setWizardDayNames(Array(wizardTotalDays).fill(''));
+      if (wizardSelectedWeekdays.length === 0) {
+        showError('Error', 'Debes seleccionar al menos un día de la semana');
+        return;
+      }
+      // Ordenar días seleccionados
+      const sortedWeekdays = [...wizardSelectedWeekdays].sort((a, b) => a - b);
+      setWizardSelectedWeekdays(sortedWeekdays);
+      // Inicializar nombres de días con el nombre del día de la semana
+      setWizardDayNames(sortedWeekdays.map(d => WEEKDAYS[d]));
       // Inicializar ejercicios vacíos para cada día
       const emptyExercises: { [key: number]: any[] } = {};
-      for (let i = 0; i < wizardTotalDays; i++) {
+      for (let i = 0; i < sortedWeekdays.length; i++) {
         emptyExercises[i] = [];
       }
       setWizardDayExercises(emptyExercises);
@@ -236,10 +247,10 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
 
   const handleWizardFinish = async () => {
     // Validar que todos los días tengan al menos un ejercicio
-    const daysWithoutExercises: number[] = [];
-    for (let i = 0; i < wizardTotalDays; i++) {
+    const daysWithoutExercises: string[] = [];
+    for (let i = 0; i < wizardSelectedWeekdays.length; i++) {
       if (!wizardDayExercises[i] || wizardDayExercises[i].length === 0) {
-        daysWithoutExercises.push(i + 1);
+        daysWithoutExercises.push(WEEKDAYS[wizardSelectedWeekdays[i]]);
       }
     }
 
@@ -255,22 +266,24 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
       // Crear rutina
       const newRoutine = await routineService.createRoutine(clientId, {
         name: wizardRoutineName,
-        totalDays: wizardTotalDays,
+        totalDays: wizardSelectedWeekdays.length,
       });
 
       // Obtener rutina creada con días
       const createdRoutine = await routineService.getRoutine(clientId);
 
       if (createdRoutine && createdRoutine.days) {
-        // Actualizar nombres de días y agregar ejercicios
+        // Actualizar nombres de días, weekday y agregar ejercicios
         for (let i = 0; i < createdRoutine.days.length; i++) {
           const day = createdRoutine.days[i];
+          const weekday = wizardSelectedWeekdays[i];
           
-          // Actualizar nombre del día
+          // Actualizar nombre del día y weekday
           await routineService.updateDay(day.id, {
             name: day.name,
             custom_name: wizardDayNames[i].trim(),
             notes: undefined,
+            weekday: weekday,
           });
 
           // Agregar ejercicios al día
@@ -300,6 +313,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
 
   const openDayDetails = (day: RoutineDay) => {
     setSelectedDay(day);
+    setSelectedDayWeekday(day.weekday ?? 0);
     setDayNotes(day.notes || '');
     loadDayExercises(day.id);
     loadMuscleGroups();
@@ -318,9 +332,10 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
       await routineService.updateDay(selectedDay.id, {
         name: selectedDay.name,
         notes: dayNotes,
+        weekday: selectedDayWeekday,
       });
 
-      const updatedDay = { ...selectedDay, notes: dayNotes };
+      const updatedDay = { ...selectedDay, notes: dayNotes, weekday: selectedDayWeekday };
       setSelectedDay(updatedDay);
 
       if (routine && routine.days) {
@@ -552,9 +567,16 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                 >
                   <View style={styles.dayCardContent}>
                     <View style={styles.dayNumber}>
-                      <Text style={styles.dayNumberText}>{day.day_number}</Text>
+                      <Text style={styles.dayNumberText}>
+                        {day.weekday !== undefined && day.weekday !== null 
+                          ? WEEKDAYS[day.weekday].substring(0, 3) 
+                          : day.day_number}
+                      </Text>
                     </View>
                     <View style={styles.dayInfo}>
+                      <Text style={styles.dayWeekdayLabel}>
+                        {day.weekday !== undefined && day.weekday !== null ? WEEKDAYS[day.weekday] : `Día ${day.day_number}`}
+                      </Text>
                       <Text style={styles.dayName}>{day.custom_name || day.name}</Text>
                       {day.notes && <Text style={styles.dayNotes}>{day.notes}</Text>}
 
@@ -627,7 +649,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                   </View>
                   <Text style={styles.wizardStepTitle}>Información Básica</Text>
                   <Text style={styles.wizardStepSubtitle}>
-                    Comienza definiendo el nombre y duración de tu rutina
+                    Comienza definiendo el nombre y los días de tu rutina
                   </Text>
                 </View>
 
@@ -647,29 +669,38 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
 
                 <View style={styles.wizardInputGroup}>
                   <Text style={styles.wizardInputLabel}>DÍAS DE ENTRENAMIENTO</Text>
-                  <View style={styles.wizardDaysSelector}>
-                    {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                  <Text style={styles.wizardDaysHintTop}>
+                    Selecciona los días de la semana que entrenará
+                  </Text>
+                  <View style={styles.wizardWeekdaysSelector}>
+                    {WEEKDAYS.map((day, index) => (
                       <TouchableOpacity
-                        key={num}
+                        key={index}
                         style={[
-                          styles.wizardDayButton,
-                          wizardTotalDays === num && styles.wizardDayButtonActive,
+                          styles.wizardWeekdayButton,
+                          wizardSelectedWeekdays.includes(index) && styles.wizardWeekdayButtonActive,
                         ]}
-                        onPress={() => setWizardTotalDays(num)}
+                        onPress={() => {
+                          if (wizardSelectedWeekdays.includes(index)) {
+                            setWizardSelectedWeekdays(wizardSelectedWeekdays.filter(d => d !== index));
+                          } else {
+                            setWizardSelectedWeekdays([...wizardSelectedWeekdays, index].sort((a, b) => a - b));
+                          }
+                        }}
                       >
                         <Text
                           style={[
-                            styles.wizardDayButtonText,
-                            wizardTotalDays === num && styles.wizardDayButtonTextActive,
+                            styles.wizardWeekdayButtonText,
+                            wizardSelectedWeekdays.includes(index) && styles.wizardWeekdayButtonTextActive,
                           ]}
                         >
-                          {num}
+                          {day.substring(0, 3)}
                         </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                   <Text style={styles.wizardDaysHint}>
-                    {wizardTotalDays} {wizardTotalDays === 1 ? 'día' : 'días'} de entrenamiento
+                    {wizardSelectedWeekdays.length} {wizardSelectedWeekdays.length === 1 ? 'día' : 'días'} seleccionado{wizardSelectedWeekdays.length !== 1 ? 's' : ''}
                   </Text>
                 </View>
               </View>
@@ -690,7 +721,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                 {wizardDayNames.map((name, index) => (
                   <View key={index} style={styles.wizardDayNameItem}>
                     <View style={styles.wizardDayNameNumber}>
-                      <Text style={styles.wizardDayNameNumberText}>{index + 1}</Text>
+                      <Text style={styles.wizardDayNameNumberText}>{WEEKDAYS[wizardSelectedWeekdays[index]].substring(0, 3)}</Text>
                     </View>
                     <View style={styles.wizardDayNameInputWrapper}>
                       <TextInput
@@ -744,7 +775,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                           wizardCurrentDay === index && styles.wizardDayTabNumberActive,
                         ]}
                       >
-                        {index + 1}
+                        {WEEKDAYS[wizardSelectedWeekdays[index]].substring(0, 3)}
                       </Text>
                       <Text
                         style={[
@@ -753,7 +784,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                         ]}
                         numberOfLines={1}
                       >
-                        {name || `Día ${index + 1}`}
+                        {name || WEEKDAYS[wizardSelectedWeekdays[index]]}
                       </Text>
                       {wizardDayExercises[index] && wizardDayExercises[index].length > 0 && (
                         <View style={styles.wizardDayTabBadge}>
@@ -944,10 +975,10 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
               <TouchableOpacity
                 style={[
                   styles.wizardNextButton,
-                  wizardStep === 1 && !wizardRoutineName.trim() && styles.wizardButtonDisabled,
+                  wizardStep === 1 && (!wizardRoutineName.trim() || wizardSelectedWeekdays.length === 0) && styles.wizardButtonDisabled,
                 ]}
                 onPress={handleWizardNext}
-                disabled={wizardStep === 1 && !wizardRoutineName.trim()}
+                disabled={wizardStep === 1 && (!wizardRoutineName.trim() || wizardSelectedWeekdays.length === 0)}
               >
                 <Text style={styles.wizardNextButtonText}>Siguiente</Text>
                 <Ionicons name="arrow-forward" size={20} color={palette.text} />
@@ -1015,7 +1046,9 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
               <Ionicons name="close" size={24} color={palette.text} />
             </TouchableOpacity>
             <Text style={styles.wizardHeaderTitle}>
-              Día {selectedDay?.day_number}
+              {selectedDay?.weekday !== undefined && selectedDay?.weekday !== null 
+                ? WEEKDAYS[selectedDay.weekday] 
+                : `Día ${selectedDay?.day_number}`}
             </Text>
             <View style={{ width: 40 }} />
           </View>
@@ -1034,6 +1067,34 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                 <Text style={styles.dayEditSubtitle}>
                   Configura los ejercicios y notas de este día
                 </Text>
+              </View>
+
+              {/* Selector de día de la semana */}
+              <View style={styles.wizardInputGroup}>
+                <Text style={styles.wizardInputLabel}>DÍA DE LA SEMANA</Text>
+                <View style={styles.weekdaySelectorRow}>
+                  {WEEKDAYS.map((day, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.weekdaySelectorButton,
+                        selectedDayWeekday === index && styles.weekdaySelectorButtonActive,
+                      ]}
+                      onPress={() => {
+                        setSelectedDayWeekday(index);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.weekdaySelectorButtonText,
+                          selectedDayWeekday === index && styles.weekdaySelectorButtonTextActive,
+                        ]}
+                      >
+                        {day.substring(0, 3)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
 
               {/* Day Notes */}
@@ -1423,6 +1484,14 @@ const styles = StyleSheet.create({
   dayInfo: {
     flex: 1,
   },
+  dayWeekdayLabel: {
+    color: palette.primary,
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
   dayName: {
     color: palette.text,
     fontSize: 16,
@@ -1718,6 +1787,34 @@ const styles = StyleSheet.create({
   dayEditSubtitle: {
     fontSize: 13,
     color: palette.muted,
+  },
+  weekdaySelectorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  weekdaySelectorButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: palette.inputBg,
+    borderWidth: 1,
+    borderColor: palette.border,
+    minWidth: 44,
+    alignItems: 'center',
+  },
+  weekdaySelectorButtonActive: {
+    backgroundColor: palette.primaryGlow,
+    borderColor: palette.primary,
+  },
+  weekdaySelectorButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: palette.muted,
+  },
+  weekdaySelectorButtonTextActive: {
+    color: palette.primary,
   },
   dayExercisesSection: {
     marginBottom: spacing.lg,
@@ -2179,6 +2276,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: spacing.xs,
+  },
+  wizardWeekdaysSelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  wizardWeekdayButton: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.md,
+    backgroundColor: palette.inputBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: palette.border,
+  },
+  wizardWeekdayButtonActive: {
+    backgroundColor: palette.primaryGlow,
+    borderColor: palette.primary,
+  },
+  wizardWeekdayButtonText: {
+    color: palette.muted,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  wizardWeekdayButtonTextActive: {
+    color: palette.primary,
+  },
+  wizardDaysHintTop: {
+    fontSize: 13,
+    color: palette.muted,
+    marginBottom: spacing.xs,
   },
   wizardDayButton: {
     flex: 1,

@@ -93,6 +93,7 @@ export interface RoutineDay {
   id: number;
   routine_id: number;
   day_number: number;
+  weekday: number; // 0 = Lunes, 1 = Martes, ..., 6 = Domingo
   name: string;
   custom_name?: string;
   notes: string;
@@ -109,6 +110,7 @@ export interface DayExercise {
   reps: string;
   notes: string;
   order_index: number;
+  video_url?: string;
 }
 
 export interface Exercise {
