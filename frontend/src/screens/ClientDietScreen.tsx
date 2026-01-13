@@ -120,6 +120,19 @@ export default function ClientDietScreen({ clientId, navigation }: Props) {
     }, 0);
   };
 
+  const calculateMacros = () => {
+    return foods.reduce((totals, food) => {
+      const multiplier = food.quantity / 100;
+      return {
+        protein: totals.protein + (food.protein_per_100g || 0) * multiplier,
+        carbs: totals.carbs + (food.carbs_per_100g || 0) * multiplier,
+        fat: totals.fat + (food.fat_per_100g || 0) * multiplier,
+        fiber: totals.fiber + (food.fiber_per_100g || 0) * multiplier,
+        sugar: totals.sugar + (food.sugar_per_100g || 0) * multiplier,
+      };
+    }, { protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0 });
+  };
+
   if (loading) {
     return <LoadingScreen message="Cargando tu dieta..." />;
   }
@@ -223,9 +236,47 @@ export default function ClientDietScreen({ clientId, navigation }: Props) {
                       ))}
                     </View>
 
-                    <View style={styles.caloriesContainer}>
-                      <Text style={styles.caloriesLabel}>Total kcal</Text>
-                      <Text style={styles.caloriesValue}>{Math.round(calculateTotalCalories())}</Text>
+                    {/* Nutritional Info */}
+                    <View style={styles.nutritionContainer}>
+                      {/* Macros principales */}
+                      <View style={styles.macrosRow}>
+                        <View style={[styles.macroCard, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                          <Text style={[styles.macroValueNew, { color: '#EF4444' }]}>{Math.round(calculateMacros().protein)}g</Text>
+                          <Text style={styles.macroLabelNew}>Proteína</Text>
+                        </View>
+
+                        <View style={[styles.macroCard, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                          <Text style={[styles.macroValueNew, { color: '#3B82F6' }]}>{Math.round(calculateMacros().carbs)}g</Text>
+                          <Text style={styles.macroLabelNew}>Hidratos</Text>
+                        </View>
+
+                        <View style={[styles.macroCard, { backgroundColor: 'rgba(234, 179, 8, 0.1)' }]}>
+                          <Text style={[styles.macroValueNew, { color: '#EAB308' }]}>{Math.round(calculateMacros().fat)}g</Text>
+                          <Text style={styles.macroLabelNew}>Grasas</Text>
+                        </View>
+                      </View>
+
+                      {/* Macros secundarios */}
+                      <View style={styles.secondaryMacrosRow}>
+                        <View style={styles.secondaryMacroItem}>
+                          <Text style={styles.secondaryMacroText}>
+                            <Text style={{ fontWeight: '600' }}>{Math.round(calculateMacros().fiber)}g</Text> fibra
+                          </Text>
+                        </View>
+                        <View style={styles.secondaryMacroDivider} />
+                        <View style={styles.secondaryMacroItem}>
+                          <Text style={styles.secondaryMacroText}>
+                            <Text style={{ fontWeight: '600' }}>{Math.round(calculateMacros().sugar)}g</Text> azúcares
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Calorías totales */}
+                      <View style={styles.caloriesCard}>
+                        <Ionicons name="flame" size={24} color="#FF6B35" />
+                        <Text style={styles.caloriesValueBig}>{Math.round(calculateTotalCalories())}</Text>
+                        <Text style={styles.caloriesLabelBig}>kcal</Text>
+                      </View>
                     </View>
                   </View>
                 )}
@@ -401,24 +452,87 @@ const styles = StyleSheet.create({
     color: palette.text,
     flex: 1,
   },
-  caloriesContainer: {
+  nutritionContainer: {
     marginTop: spacing.lg,
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: palette.border,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
-  caloriesLabel: {
+  caloriesCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  caloriesValueBig: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FF6B35',
+  },
+  caloriesLabelBig: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FF6B35',
+    opacity: 0.8,
+  },
+  macrosRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  macroCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+  },
+  macroIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  macroValueNew: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  macroLabelNew: {
+    fontSize: 11,
     color: palette.muted,
-    fontSize: 14,
+    marginTop: 2,
     fontWeight: '500',
   },
-  caloriesValue: {
-    color: palette.primary,
-    fontSize: 20,
-    fontWeight: '700',
+  secondaryMacrosRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.surfaceAlt,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.sm,
+  },
+  secondaryMacroItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  secondaryMacroText: {
+    fontSize: 13,
+    color: palette.muted,
+  },
+  secondaryMacroDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: palette.border,
+    marginHorizontal: spacing.md,
   },
   noOptionsContainer: {
     paddingVertical: spacing.xl * 2,

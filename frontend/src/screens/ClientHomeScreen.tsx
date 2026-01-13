@@ -2,6 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import StepsScreen from './StepsScreen';
 import ClientDietScreen from './ClientDietScreen';
 import ClientMealOptionsScreen from './ClientMealOptionsScreen';
 import ClientExerciseScreen from './ClientExerciseScreen';
@@ -67,6 +68,16 @@ export default function ClientHomeScreen() {
         },
       }}
     >
+      <Tab.Screen
+        name="Steps"
+        component={StepsScreen}
+        options={{
+          tabBarLabel: 'Pasos',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="footsteps-outline" size={size} color={color} />
+          ),
+        }}
+      />
       <Tab.Screen
         name="Diet"
         children={() => <DietStackNavigator userId={user.id} />}

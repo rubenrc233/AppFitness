@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { clientService } from '../services/api';
+import { clientService, stepsService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { palette, spacing, radius, typography } from '../theme';
 import CustomAlert, { useCustomAlert } from '../components/CustomAlert';
@@ -11,10 +11,16 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
   const [clientName, setClientName] = useState('');
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
-  const { alertState, hideAlert, showError } = useCustomAlert();
+  const { alertState, hideAlert, showError, showSuccess } = useCustomAlert();
+  
+  // Estado para modal de pasos
+  const [stepsModalVisible, setStepsModalVisible] = useState(false);
+  const [currentStepsGoal, setCurrentStepsGoal] = useState(10000);
+  const [newStepsGoal, setNewStepsGoal] = useState('10000');
 
   useEffect(() => {
     loadClientDetails();
+    loadStepsGoal();
   }, [clientId]);
 
   const loadClientDetails = async () => {
@@ -29,6 +35,35 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
     }
   };
 
+  const loadStepsGoal = async () => {
+    try {
+      const settings = await stepsService.getSettings(clientId);
+      if (settings?.daily_goal) {
+        setCurrentStepsGoal(settings.daily_goal);
+        setNewStepsGoal(settings.daily_goal.toString());
+      }
+    } catch (error) {
+      console.error('Error loading steps goal:', error);
+    }
+  };
+
+  const handleSaveStepsGoal = async () => {
+    const goal = parseInt(newStepsGoal, 10);
+    if (isNaN(goal) || goal < 1000 || goal > 50000) {
+      showError('Error', 'La meta debe estar entre 1.000 y 50.000 pasos');
+      return;
+    }
+    
+    try {
+      await stepsService.updateSettings(clientId, goal);
+      setCurrentStepsGoal(goal);
+      setStepsModalVisible(false);
+      showSuccess('Éxito', 'Meta de pasos actualizada');
+    } catch (error) {
+      showError('Error', 'No se pudo guardar la meta');
+    }
+  };
+
   const isAdmin = user?.role === 'admin';
 
   if (loading || !clientName) {
@@ -40,6 +75,12 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
   }
 
   const menuItems = [
+    {
+      icon: 'footsteps-outline',
+      title: 'Meta de Pasos',
+      subtitle: `${currentStepsGoal.toLocaleString()} pasos/día`,
+      onPress: () => setStepsModalVisible(true),
+    },
     {
       icon: 'barbell-outline',
       title: 'Gestionar Rutina',
@@ -79,13 +120,58 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
                 <View style={styles.menuIcon}>
                   <Ionicons name={item.icon as any} size={24} color={palette.primary} />
                 </View>
-                <Text style={styles.menuText}>{item.title}</Text>
+                <View style={styles.menuTextContainer}>
+                  <Text style={styles.menuText}>{item.title}</Text>
+                  {item.subtitle && (
+                    <Text style={styles.menuSubtext}>{item.subtitle}</Text>
+                  )}
+                </View>
                 <Ionicons name="chevron-forward" size={20} color={palette.muted} />
               </TouchableOpacity>
             ))}
           </View>
         )}
       </View>
+
+      {/* Modal para configurar meta de pasos */}
+      <Modal visible={stepsModalVisible} animationType="fade" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Meta de Pasos Diarios</Text>
+            <Text style={styles.modalSubtitle}>
+              Configura la meta diaria de pasos para {clientName}
+            </Text>
+            
+            <TextInput
+              style={styles.modalInput}
+              value={newStepsGoal}
+              onChangeText={setNewStepsGoal}
+              keyboardType="numeric"
+              placeholder="10000"
+              placeholderTextColor={palette.muted}
+            />
+            <Text style={styles.modalHint}>Entre 1.000 y 50.000 pasos</Text>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => {
+                  setNewStepsGoal(currentStepsGoal.toString());
+                  setStepsModalVisible(false);
+                }}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalSaveBtn}
+                onPress={handleSaveStepsGoal}
+              >
+                <Text style={styles.modalSaveText}>Guardar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Custom Alert */}
       <CustomAlert
@@ -161,10 +247,88 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: spacing.md,
   },
-  menuText: {
+  menuTextContainer: {
     flex: 1,
+  },
+  menuText: {
     fontSize: 16,
     fontWeight: '500',
     color: palette.text,
+  },
+  menuSubtext: {
+    fontSize: 13,
+    color: palette.muted,
+    marginTop: 2,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: palette.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    width: '100%',
+    maxWidth: 340,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: palette.text,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: palette.muted,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  modalInput: {
+    backgroundColor: palette.inputBg,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    fontSize: 24,
+    fontWeight: '700',
+    color: palette.text,
+    textAlign: 'center',
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  modalHint: {
+    fontSize: 12,
+    color: palette.muted,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: palette.surfaceAlt,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: palette.muted,
+    fontWeight: '600',
+  },
+  modalSaveBtn: {
+    flex: 1,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: palette.primary,
+    alignItems: 'center',
+  },
+  modalSaveText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });

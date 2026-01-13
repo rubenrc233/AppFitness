@@ -30,6 +30,12 @@ export interface FoodItem {
   category: string;
   is_custom: boolean;
   created_by_user_id?: number;
+  calories_per_100g?: number;
+  protein_per_100g?: number;
+  carbs_per_100g?: number;
+  fat_per_100g?: number;
+  fiber_per_100g?: number;
+  sugar_per_100g?: number;
 }
 
 export interface Diet {
@@ -70,6 +76,11 @@ export interface OptionFood {
   notes: string;
   order_index: number;
   calories_per_100g?: number;
+  protein_per_100g?: number;
+  carbs_per_100g?: number;
+  fat_per_100g?: number;
+  fiber_per_100g?: number;
+  sugar_per_100g?: number;
 }
 
 // Nuevos tipos para sistema de rutinas y días

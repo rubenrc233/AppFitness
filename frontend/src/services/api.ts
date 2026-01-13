@@ -427,4 +427,19 @@ export const recipeService = {
   },
 };
 
+// Servicio de pasos
+export const stepsService = {
+  // Obtener configuración de pasos de un cliente
+  getSettings: async (clientId: number) => {
+    const response = await api.get(`/steps/settings/${clientId}`);
+    return response.data;
+  },
+
+  // Actualizar meta de pasos (admin)
+  updateSettings: async (clientId: number, dailyGoal: number) => {
+    const response = await api.post(`/steps/settings/${clientId}`, { daily_goal: dailyGoal });
+    return response.data;
+  },
+};
+
 export default api;

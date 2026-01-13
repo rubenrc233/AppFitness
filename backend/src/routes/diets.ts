@@ -266,7 +266,9 @@ router.get('/options/:optionId/foods', async (req: Request, res: Response) => {
     const { optionId } = req.params;
     
     const [foods] = await pool.query<RowDataPacket[]>(
-      `SELECT opt_f.*, fl.name as food_name, fl.category as food_category, fl.calories_per_100g
+      `SELECT opt_f.*, fl.name as food_name, fl.category as food_category, 
+              fl.calories_per_100g, fl.protein_per_100g, fl.carbs_per_100g, 
+              fl.fat_per_100g, fl.fiber_per_100g, fl.sugar_per_100g
        FROM option_foods opt_f
        JOIN food_library fl ON opt_f.food_id = fl.id
        WHERE opt_f.meal_option_id = ?
