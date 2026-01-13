@@ -348,7 +348,7 @@ export default function AdminDashboard({ navigation }: any) {
             </View>
           }
         />
-          </>
+        </>
         ) : (
           /* Tab de Pendientes */
           <>
