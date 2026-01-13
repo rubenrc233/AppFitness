@@ -36,6 +36,7 @@ export default function ProgressHistoryScreen({ route, navigation }: Props) {
   const [settings, setSettings] = useState<ProgressSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const { alertState, hideAlert, showSuccess, showError } = useCustomAlert();
 
   const [frequencyWeeks, setFrequencyWeeks] = useState(1);
@@ -98,9 +99,32 @@ export default function ProgressHistoryScreen({ route, navigation }: Props) {
     return days[day] || day;
   };
 
+  const getChartData = () => {
+    if (!history || history.length < 2) return null;
+    
+    const validHistory = history
+      .filter(h => h.weight !== undefined && h.weight !== null && !isNaN(Number(h.weight)))
+      .slice(0, 6)
+      .reverse();
+    
+    if (validHistory.length < 2) return null;
+    
+    return {
+      labels: validHistory.map((h) => {
+        const d = new Date(h.created_at);
+        return `${d.getDate()}/${d.getMonth() + 1}`;
+      }),
+      datasets: [{
+        data: validHistory.map((h) => Number(h.weight)),
+      }],
+    };
+  };
+
   if (loading) {
     return <LoadingScreen message="Cargando historial..." />;
   }
+
+  const chartData = getChartData();
 
   return (
     <View style={styles.container}>
@@ -135,24 +159,11 @@ export default function ProgressHistoryScreen({ route, navigation }: Props) {
         </View>
 
         {/* Chart */}
-        {history.length > 1 && (
+        {chartData && (
           <View style={styles.chartContainer}>
             <Text style={styles.chartTitle}>Tendencia de Peso</Text>
             <LineChart
-              data={{
-                labels: history
-                  .slice(0, 6)
-                  .reverse()
-                  .map((h) => {
-                    const d = new Date(h.created_at);
-                    return `${d.getDate()}/${d.getMonth() + 1}`;
-                  }),
-                datasets: [
-                  {
-                    data: history.slice(0, 6).reverse().map((h) => h.weight),
-                  },
-                ],
-              }}
+              data={chartData}
               width={screenWidth - 60}
               height={180}
               yAxisSuffix="kg"
@@ -211,18 +222,36 @@ export default function ProgressHistoryScreen({ route, navigation }: Props) {
                 </View>
 
                 <View style={styles.photoGrid}>
-                  <View style={styles.photoContainer}>
+                  <TouchableOpacity 
+                    style={styles.photoContainer}
+                    onPress={() => setSelectedPhoto(update.front_photo_url)}
+                  >
                     <Image source={{ uri: update.front_photo_url }} style={styles.thumbnail} />
                     <Text style={styles.photoLabel}>Frontal</Text>
-                  </View>
-                  <View style={styles.photoContainer}>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.photoContainer}
+                    onPress={() => setSelectedPhoto(update.side_photo_url)}
+                  >
                     <Image source={{ uri: update.side_photo_url }} style={styles.thumbnail} />
                     <Text style={styles.photoLabel}>Lateral</Text>
-                  </View>
-                  <View style={styles.photoContainer}>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.photoContainer}
+                    onPress={() => setSelectedPhoto(update.back_photo_url)}
+                  >
                     <Image source={{ uri: update.back_photo_url }} style={styles.thumbnail} />
                     <Text style={styles.photoLabel}>Espalda</Text>
-                  </View>
+                  </TouchableOpacity>
+                  {update.extra_photo_url && (
+                    <TouchableOpacity 
+                      style={styles.photoContainer}
+                      onPress={() => setSelectedPhoto(update.extra_photo_url!)}
+                    >
+                      <Image source={{ uri: update.extra_photo_url }} style={styles.thumbnail} />
+                      <Text style={styles.photoLabel}>Extra</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 {index < history.length - 1 && (
@@ -245,6 +274,30 @@ export default function ProgressHistoryScreen({ route, navigation }: Props) {
           )}
         </View>
       </ScrollView>
+
+      {/* Photo Viewer Modal */}
+      <Modal
+        visible={!!selectedPhoto}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setSelectedPhoto(null)}
+      >
+        <View style={styles.photoViewerOverlay}>
+          <TouchableOpacity 
+            style={styles.photoViewerCloseButton}
+            onPress={() => setSelectedPhoto(null)}
+          >
+            <Ionicons name="close-circle" size={36} color="#fff" />
+          </TouchableOpacity>
+          {selectedPhoto && (
+            <Image 
+              source={{ uri: selectedPhoto }} 
+              style={styles.fullScreenPhoto}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
 
       {/* Settings Modal */}
       <Modal
@@ -522,5 +575,21 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  photoViewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoViewerCloseButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+  },
+  fullScreenPhoto: {
+    width: screenWidth,
+    height: screenWidth * 1.3,
   },
 });

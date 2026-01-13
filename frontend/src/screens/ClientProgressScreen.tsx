@@ -36,17 +36,19 @@ export default function ClientProgressScreen({ clientId }: Props) {
   
   // Modal para selección de foto
   const [photoPickerModalVisible, setPhotoPickerModalVisible] = useState(false);
-  const [selectedPhotoType, setSelectedPhotoType] = useState<'front' | 'side' | 'back'>('front');
+  const [selectedPhotoType, setSelectedPhotoType] = useState<'front' | 'side' | 'back' | 'extra'>('front');
 
   const [weight, setWeight] = useState('');
   const [photos, setPhotos] = useState<{
     front: ImagePicker.ImagePickerAsset | null;
     side: ImagePicker.ImagePickerAsset | null;
     back: ImagePicker.ImagePickerAsset | null;
+    extra: ImagePicker.ImagePickerAsset | null;
   }>({
     front: null,
     side: null,
     back: null,
+    extra: null,
   });
 
   useEffect(() => {
@@ -115,7 +117,7 @@ export default function ClientProgressScreen({ clientId }: Props) {
 
   const uploadProgress = async () => {
     if (!photos.front || !photos.side || !photos.back || !weight) {
-      showWarning('Datos Incompletos', 'Debes completar todos los campos y fotos');
+      showWarning('Datos Incompletos', 'Debes completar peso y las 3 fotos principales');
       return;
     }
 
@@ -149,11 +151,20 @@ export default function ClientProgressScreen({ clientId }: Props) {
         name: 'back.jpg',
       } as any);
 
+      // Foto extra es opcional
+      if (photos.extra) {
+        formData.append('extraPhoto', {
+          uri: photos.extra.uri,
+          type: 'image/jpeg',
+          name: 'extra.jpg',
+        } as any);
+      }
+
       await progressService.uploadProgress(formData);
 
       showSuccess('¡Éxito!', 'Tu progreso ha sido guardado correctamente');
       
-      setPhotos({ front: null, side: null, back: null });
+      setPhotos({ front: null, side: null, back: null, extra: null });
       setWeight('');
       
       await loadData();
@@ -165,8 +176,8 @@ export default function ClientProgressScreen({ clientId }: Props) {
     }
   };
 
-  const getPhotoButtonLabel = (type: 'front' | 'side' | 'back') => {
-    const labels = { front: 'Frontal', side: 'Lateral', back: 'Espalda' };
+  const getPhotoButtonLabel = (type: 'front' | 'side' | 'back' | 'extra') => {
+    const labels = { front: 'Frontal', side: 'Lateral', back: 'Espalda', extra: 'Extra' };
     return labels[type];
   };
 
@@ -189,11 +200,20 @@ export default function ClientProgressScreen({ clientId }: Props) {
   };
 
   const getChartData = () => {
-    if (history.length === 0) return null;
+    if (!history || history.length === 0) return null;
 
-    const sortedHistory = [...history].sort((a, b) => 
-      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    );
+    const sortedHistory = [...history]
+      .filter(update => update.weight !== undefined && update.weight !== null && !isNaN(Number(update.weight)))
+      .sort((a, b) => 
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+
+    if (sortedHistory.length === 0) return null;
+
+    const weights = sortedHistory.map(update => Number(update.weight));
+    
+    // Verificar que todos los pesos son números válidos
+    if (weights.some(w => isNaN(w))) return null;
 
     return {
       labels: sortedHistory.map(update => {
@@ -201,7 +221,7 @@ export default function ClientProgressScreen({ clientId }: Props) {
         return `${date.getDate()}/${date.getMonth() + 1}`;
       }),
       datasets: [{
-        data: sortedHistory.map(update => update.weight),
+        data: weights,
         strokeWidth: 2,
       }]
     };
@@ -219,14 +239,14 @@ export default function ClientProgressScreen({ clientId }: Props) {
       <AppHeader title="Mi Progreso" />
       <ScrollView style={styles.scrollView}>
 
-        {chartData && history.length >= 2 && (
+        {chartData && history.length >= 1 && (
           <View style={styles.chartSection}>
             <Text style={styles.sectionTitle}>Evolución de Peso</Text>
             
             <View style={styles.chartContainer}>
               <LineChart
                 data={chartData}
-                width={screenWidth - 40}
+                width={screenWidth - (spacing.lg * 2) - (spacing.sm * 2) - 2}
                 height={200}
                 chartConfig={{
                   backgroundColor: palette.surface,
@@ -248,79 +268,59 @@ export default function ClientProgressScreen({ clientId }: Props) {
                 style={styles.chart}
               />
             </View>
+          </View>
+        )}
 
-            {weightChange && (
-              <View style={styles.weightChangeContainer}>
-                <Ionicons 
-                  name={weightChange.isPositive ? 'trending-up' : 'trending-down'} 
-                  size={24} 
-                  color={weightChange.isPositive ? palette.danger : palette.success} 
-                />
-                <Text style={styles.weightChangeText}>
-                  Has {weightChange.type} {weightChange.change.toFixed(1)} kg
-                </Text>
-              </View>
+        <View style={styles.uploadSection}>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Peso (kg)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="75.5"
+              placeholderTextColor={palette.mutedAlt}
+              keyboardType="numeric"
+              value={weight}
+              onChangeText={setWeight}
+            />
+          </View>
+
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.photosScrollView}
+            contentContainerStyle={styles.photosGrid}
+          >
+            {(['front', 'side', 'back', 'extra'] as const).map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[styles.photoButton, type === 'extra' && styles.photoButtonExtra]}
+                onPress={() => pickImage(type)}
+              >
+                {photos[type] ? (
+                  <Image source={{ uri: photos[type]!.uri }} style={styles.photoPreview} />
+                ) : (
+                  <View style={styles.photoPlaceholder}>
+                    <Ionicons name={type === 'extra' ? 'add-circle-outline' : 'camera-outline'} size={24} color={palette.muted} />
+                    <Text style={styles.photoLabel}>{getPhotoButtonLabel(type)}</Text>
+                    {type === 'extra' && <Text style={styles.optionalLabel}>(Opcional)</Text>}
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <TouchableOpacity
+            style={[styles.saveButton, uploading && styles.saveButtonDisabled]}
+            onPress={uploadProgress}
+            disabled={uploading}
+          >
+            {uploading ? (
+              <ActivityIndicator color={palette.text} />
+            ) : (
+              <Text style={styles.saveButtonText}>Guardar Progreso</Text>
             )}
-          </View>
-        )}
-
-        {status?.canUpload ? (
-          <View style={styles.uploadSection}>
-            <Text style={styles.sectionTitle}>Nueva Actualización</Text>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Peso (kg)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="75.5"
-                placeholderTextColor={palette.mutedAlt}
-                keyboardType="numeric"
-                value={weight}
-                onChangeText={setWeight}
-              />
-            </View>
-
-            <View style={styles.photosGrid}>
-              {(['front', 'side', 'back'] as const).map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={styles.photoButton}
-                  onPress={() => pickImage(type)}
-                >
-                  {photos[type] ? (
-                    <Image source={{ uri: photos[type]!.uri }} style={styles.photoPreview} />
-                  ) : (
-                    <View style={styles.photoPlaceholder}>
-                      <Ionicons name="camera-outline" size={24} color={palette.muted} />
-                      <Text style={styles.photoLabel}>{getPhotoButtonLabel(type)}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={[styles.saveButton, uploading && styles.saveButtonDisabled]}
-              onPress={uploadProgress}
-              disabled={uploading}
-            >
-              {uploading ? (
-                <ActivityIndicator color={palette.text} />
-              ) : (
-                <Text style={styles.saveButtonText}>Guardar Progreso</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.lockedSection}>
-            <Ionicons name="lock-closed" size={24} color={palette.muted} />
-            <Text style={styles.lockedText}>
-              Próxima revisión: {status?.nextDueDate
-                ? new Date(status.nextDueDate).toLocaleDateString('es-ES')
-                : 'No configurada'}
-            </Text>
-          </View>
-        )}
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.historySection}>
           <Text style={styles.sectionTitle}>Historial</Text>
@@ -345,6 +345,9 @@ export default function ClientProgressScreen({ clientId }: Props) {
                   <Image source={{ uri: update.front_photo_url }} style={styles.thumbnail} />
                   <Image source={{ uri: update.side_photo_url }} style={styles.thumbnail} />
                   <Image source={{ uri: update.back_photo_url }} style={styles.thumbnail} />
+                  {update.extra_photo_url && (
+                    <Image source={{ uri: update.extra_photo_url }} style={styles.thumbnail} />
+                  )}
                 </View>
               </View>
             ))
@@ -437,6 +440,7 @@ const styles = StyleSheet.create({
   },
   chartSection: {
     paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
     marginBottom: spacing.lg,
   },
   chartContainer: {
@@ -483,16 +487,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.border,
   },
+  photosScrollView: {
+    marginBottom: spacing.md,
+    marginHorizontal: -spacing.lg,
+  },
   photosGrid: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   photoButton: {
-    flex: 1,
-    aspectRatio: 0.75,
+    width: 120,
+    height: 160,
     borderRadius: radius.md,
     overflow: 'hidden',
+  },
+  photoButtonExtra: {
+    borderStyle: 'dashed',
   },
   photoPlaceholder: {
     flex: 1,
@@ -507,6 +518,11 @@ const styles = StyleSheet.create({
     color: palette.muted,
     fontSize: 11,
     marginTop: spacing.xs,
+  },
+  optionalLabel: {
+    color: palette.mutedAlt,
+    fontSize: 9,
+    marginTop: 2,
   },
   photoPreview: {
     flex: 1,

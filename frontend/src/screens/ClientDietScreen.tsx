@@ -9,8 +9,8 @@ import {
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { dietService } from '../services/api';
-import { Diet, MealOption, OptionFood } from '../types';
+import { dietService, supplementsService } from '../services/api';
+import { Diet, MealOption, OptionFood, Supplement } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 import LoadingScreen from '../components/LoadingScreen';
 import AppHeader from '../components/AppHeader';
@@ -31,6 +31,7 @@ export default function ClientDietScreen({ clientId, navigation }: Props) {
   const [selectedOption, setSelectedOption] = useState<MealOption | null>(null);
   const [foods, setFoods] = useState<OptionFood[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
+  const [supplements, setSupplements] = useState<Supplement[]>([]);
   const { alertState, hideAlert, showError } = useCustomAlert();
 
   useEffect(() => {
@@ -46,8 +47,12 @@ export default function ClientDietScreen({ clientId, navigation }: Props) {
   const loadDiet = async () => {
     try {
       setLoading(true);
-      const data = await dietService.getDiet(clientId);
-      setDiet(data);
+      const [dietData, supplementsData] = await Promise.all([
+        dietService.getDiet(clientId),
+        supplementsService.getSupplements(clientId)
+      ]);
+      setDiet(dietData);
+      setSupplements(supplementsData);
     } catch (error) {
       console.error('Error al cargar dieta:', error);
       showError('Error', 'No se pudo cargar la dieta');
@@ -286,6 +291,27 @@ export default function ClientDietScreen({ clientId, navigation }: Props) {
                 <Ionicons name="restaurant-outline" size={48} color={palette.muted} />
                 <Text style={styles.noOptionsText}>Sin opciones disponibles</Text>
                 <Text style={styles.noOptionsSubtext}>Esta comida aún no tiene opciones asignadas</Text>
+              </View>
+            )}
+            
+            {/* Sección de Suplementación */}
+            {supplements.length > 0 && (
+              <View style={styles.supplementsSection}>
+                <Text style={styles.supplementsTitle}>💊 Suplementación</Text>
+                {supplements.map((supplement) => (
+                  <View key={supplement.id} style={styles.supplementCard}>
+                    <View style={styles.supplementHeader}>
+                      <Text style={styles.supplementName}>{supplement.name}</Text>
+                      <Text style={styles.supplementDosage}>{supplement.dosage}</Text>
+                    </View>
+                    {supplement.time_of_day && (
+                      <Text style={styles.supplementTime}>⏰ {supplement.time_of_day}</Text>
+                    )}
+                    {supplement.notes && (
+                      <Text style={styles.supplementNotes}>{supplement.notes}</Text>
+                    )}
+                  </View>
+                ))}
               </View>
             )}
             
@@ -568,5 +594,54 @@ const styles = StyleSheet.create({
     color: palette.muted,
     marginTop: spacing.xs,
     textAlign: 'center',
+  },
+  supplementsSection: {
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+  },
+  supplementsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: palette.text,
+    marginBottom: spacing.md,
+  },
+  supplementCard: {
+    backgroundColor: palette.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  supplementHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  supplementName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: palette.text,
+    flex: 1,
+  },
+  supplementDosage: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: palette.primary,
+    backgroundColor: palette.primaryMuted,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+  },
+  supplementTime: {
+    fontSize: 13,
+    color: palette.muted,
+    marginTop: spacing.xs,
+  },
+  supplementNotes: {
+    fontSize: 13,
+    color: palette.textWarm,
+    marginTop: spacing.xs,
+    fontStyle: 'italic',
   },
 });

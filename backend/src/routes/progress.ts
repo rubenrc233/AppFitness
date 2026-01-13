@@ -99,13 +99,8 @@ router.get('/status', authenticateToken, async (req: AuthRequest, res: Response)
   try {
     const userId = req.userId;
 
-    // Verificar si hay progreso activo
-    const [activeRows] = await pool.query<RowDataPacket[]>(
-      'SELECT * FROM active_progress WHERE client_id = ?',
-      [userId]
-    );
-
-    const canUpload = activeRows.length > 0;
+    // SIEMPRE permitir subir progreso
+    const canUpload = true;
 
     // Obtener configuración y última actualización
     const [settingsRows] = await pool.query<RowDataPacket[]>(
@@ -137,7 +132,8 @@ router.post('/upload',
   upload.fields([
     { name: 'frontPhoto', maxCount: 1 },
     { name: 'sidePhoto', maxCount: 1 },
-    { name: 'backPhoto', maxCount: 1 }
+    { name: 'backPhoto', maxCount: 1 },
+    { name: 'extraPhoto', maxCount: 1 }
   ]),
   async (req: AuthRequest, res: Response) => {
     try {
@@ -145,19 +141,9 @@ router.post('/upload',
       const { weight } = req.body;
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-      // Validar que exista progreso activo
-      const [activeRows] = await pool.query<RowDataPacket[]>(
-        'SELECT * FROM active_progress WHERE client_id = ?',
-        [userId]
-      );
-
-      if (activeRows.length === 0) {
-        return res.status(403).json({ error: 'No tienes progreso activo' });
-      }
-
-      // Validar datos
+      // Validar datos (solo las 3 fotos principales son obligatorias)
       if (!weight || !files.frontPhoto || !files.sidePhoto || !files.backPhoto) {
-        return res.status(400).json({ error: 'Faltan fotos o peso' });
+        return res.status(400).json({ error: 'Faltan fotos principales o peso' });
       }
 
       // Subir fotos a Cloudinary
@@ -182,22 +168,27 @@ router.post('/upload',
       };
 
       console.log('📤 Subiendo fotos a Cloudinary...');
+      
+      // Subir las 3 fotos obligatorias
       const [frontUrl, sideUrl, backUrl] = await Promise.all([
         uploadToCloudinary(files.frontPhoto[0]),
         uploadToCloudinary(files.sidePhoto[0]),
         uploadToCloudinary(files.backPhoto[0])
       ]);
 
+      // Subir foto extra si existe
+      let extraUrl: string | null = null;
+      if (files.extraPhoto && files.extraPhoto[0]) {
+        extraUrl = await uploadToCloudinary(files.extraPhoto[0]);
+      }
+
       console.log('✅ Fotos subidas correctamente');
 
       // Guardar en base de datos
       await pool.query(`
-        INSERT INTO progress_updates (client_id, weight, front_photo_url, side_photo_url, back_photo_url)
-        VALUES (?, ?, ?, ?, ?)
-      `, [userId, weight, frontUrl, sideUrl, backUrl]);
-
-      // Eliminar progreso activo
-      await pool.query('DELETE FROM active_progress WHERE client_id = ?', [userId]);
+        INSERT INTO progress_updates (client_id, weight, front_photo_url, side_photo_url, back_photo_url, extra_photo_url)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [userId, weight, frontUrl, sideUrl, backUrl, extraUrl]);
 
       // Actualizar próxima fecha
       const [settingsRows] = await pool.query<RowDataPacket[]>(

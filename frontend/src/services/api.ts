@@ -1,9 +1,8 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Para emulador Android usa 10.0.2.2
-// Para dispositivo físico usa tu IP local (ejemplo: 192.168.1.35)
-const API_URL = 'http://10.0.2.2:3000/api';
+// URL del backend en producción (Render)
+const API_URL = 'https://appfitness-l641.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -438,6 +437,33 @@ export const stepsService = {
   // Actualizar meta de pasos (admin)
   updateSettings: async (clientId: number, dailyGoal: number) => {
     const response = await api.post(`/steps/settings/${clientId}`, { daily_goal: dailyGoal });
+    return response.data;
+  },
+};
+
+// Servicio de suplementación
+export const supplementsService = {
+  // Obtener suplementos de un cliente
+  getSupplements: async (clientId: number) => {
+    const response = await api.get(`/supplements/${clientId}`);
+    return response.data;
+  },
+
+  // Añadir suplemento
+  addSupplement: async (clientId: number, data: { name: string; dosage: string; time_of_day?: string; notes?: string }) => {
+    const response = await api.post(`/supplements/${clientId}`, data);
+    return response.data;
+  },
+
+  // Actualizar suplemento
+  updateSupplement: async (supplementId: number, data: { name: string; dosage: string; time_of_day?: string; notes?: string }) => {
+    const response = await api.put(`/supplements/${supplementId}`, data);
+    return response.data;
+  },
+
+  // Eliminar suplemento
+  deleteSupplement: async (supplementId: number) => {
+    const response = await api.delete(`/supplements/${supplementId}`);
     return response.data;
   },
 };

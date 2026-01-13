@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import LoadingScreen from '../components/LoadingScreen';
-import { dietService } from '../services/api';
-import { Diet, DietMeal, MealOption, OptionFood, FoodItem } from '../types';
+import { dietService, supplementsService } from '../services/api';
+import { Diet, DietMeal, MealOption, OptionFood, FoodItem, Supplement } from '../types';
 import { palette, spacing, radius, typography } from '../theme';
 import CustomAlert, { useCustomAlert } from '../components/CustomAlert';
 
@@ -63,10 +63,20 @@ export default function DietManagementScreen({ route, navigation }: any) {
   const [mealOptionsMap, setMealOptionsMap] = useState<{ [mealId: number]: MealOption[] }>({});
   const [optionFoodsMap, setOptionFoodsMap] = useState<{ [optionId: number]: OptionFood[] }>({});
 
+  // Suplementación
+  const [supplements, setSupplements] = useState<Supplement[]>([]);
+  const [showSupplementsModal, setShowSupplementsModal] = useState(false);
+  const [supplementName, setSupplementName] = useState('');
+  const [supplementDosage, setSupplementDosage] = useState('');
+  const [supplementTime, setSupplementTime] = useState('');
+  const [supplementNotes, setSupplementNotes] = useState('');
+  const [editingSupplementId, setEditingSupplementId] = useState<number | null>(null);
+
   useEffect(() => {
     loadDiet();
     loadFoodLibrary();
     loadSavedRecipes();
+    loadSupplements();
   }, []);
 
   const loadSavedRecipes = async () => {
@@ -88,6 +98,80 @@ export default function DietManagementScreen({ route, navigation }: any) {
     } catch (error) {
       console.error('Error al cargar recetas:', error);
     }
+  };
+
+  const loadSupplements = async () => {
+    try {
+      const data = await supplementsService.getSupplements(clientId);
+      setSupplements(data);
+    } catch (error) {
+      console.error('Error al cargar suplementos:', error);
+    }
+  };
+
+  const handleAddSupplement = async () => {
+    if (!supplementName.trim() || !supplementDosage.trim()) {
+      showError('Error', 'Nombre y dosis son requeridos');
+      return;
+    }
+
+    try {
+      if (editingSupplementId) {
+        await supplementsService.updateSupplement(editingSupplementId, {
+          name: supplementName,
+          dosage: supplementDosage,
+          time_of_day: supplementTime || undefined,
+          notes: supplementNotes || undefined,
+        });
+        showSuccess('¡Listo!', 'Suplemento actualizado');
+      } else {
+        await supplementsService.addSupplement(clientId, {
+          name: supplementName,
+          dosage: supplementDosage,
+          time_of_day: supplementTime || undefined,
+          notes: supplementNotes || undefined,
+        });
+        showSuccess('¡Listo!', 'Suplemento añadido');
+      }
+      
+      resetSupplementForm();
+      loadSupplements();
+    } catch (error) {
+      showError('Error', 'No se pudo guardar el suplemento');
+    }
+  };
+
+  const handleDeleteSupplement = (supplementId: number) => {
+    showConfirm(
+      'Eliminar Suplemento',
+      '¿Estás seguro de que quieres eliminar este suplemento?',
+      async () => {
+        try {
+          await supplementsService.deleteSupplement(supplementId);
+          loadSupplements();
+          showSuccess('¡Listo!', 'Suplemento eliminado');
+        } catch (error) {
+          showError('Error', 'No se pudo eliminar');
+        }
+      }
+    );
+  };
+
+  const editSupplement = (supplement: Supplement) => {
+    setEditingSupplementId(supplement.id);
+    setSupplementName(supplement.name);
+    setSupplementDosage(supplement.dosage);
+    setSupplementTime(supplement.time_of_day || '');
+    setSupplementNotes(supplement.notes || '');
+    setShowSupplementsModal(true);
+  };
+
+  const resetSupplementForm = () => {
+    setSupplementName('');
+    setSupplementDosage('');
+    setSupplementTime('');
+    setSupplementNotes('');
+    setEditingSupplementId(null);
   };
 
   const loadDiet = async () => {
@@ -904,6 +988,118 @@ export default function DietManagementScreen({ route, navigation }: any) {
           </View>
         </View>
       </Modal>
+
+      {/* Modal de Suplementación */}
+      <Modal
+        visible={showSupplementsModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => {
+          setShowSupplementsModal(false);
+          resetSupplementForm();
+        }}
+      >
+        <View style={styles.supplementModalOverlay}>
+          <View style={styles.supplementModalContent}>
+            <View style={styles.supplementModalHeader}>
+              <Text style={styles.supplementModalTitle}>
+                {editingSupplementId ? 'Editar Suplemento' : 'Añadir Suplemento'}
+              </Text>
+              <TouchableOpacity onPress={() => {
+                setShowSupplementsModal(false);
+                resetSupplementForm();
+              }}>
+                <Ionicons name="close" size={28} color={palette.text} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.supplementLabel}>Nombre *</Text>
+            <TextInput
+              style={styles.supplementInput}
+              placeholder="Ej: Proteína Whey"
+              placeholderTextColor={palette.muted}
+              value={supplementName}
+              onChangeText={setSupplementName}
+            />
+
+            <Text style={styles.supplementLabel}>Dosis *</Text>
+            <TextInput
+              style={styles.supplementInput}
+              placeholder="Ej: 30g / 2 cápsulas"
+              placeholderTextColor={palette.muted}
+              value={supplementDosage}
+              onChangeText={setSupplementDosage}
+            />
+
+            <Text style={styles.supplementLabel}>Momento del día</Text>
+            <TextInput
+              style={styles.supplementInput}
+              placeholder="Ej: Desayuno, Post-entreno, Antes de dormir"
+              placeholderTextColor={palette.muted}
+              value={supplementTime}
+              onChangeText={setSupplementTime}
+            />
+
+            <Text style={styles.supplementLabel}>Notas</Text>
+            <TextInput
+              style={[styles.supplementInput, { height: 80, textAlignVertical: 'top' }]}
+              placeholder="Instrucciones adicionales..."
+              placeholderTextColor={palette.muted}
+              value={supplementNotes}
+              onChangeText={setSupplementNotes}
+              multiline
+            />
+
+            <TouchableOpacity 
+              style={styles.supplementSaveBtn}
+              onPress={handleAddSupplement}
+            >
+              <Text style={styles.supplementSaveBtnText}>
+                {editingSupplementId ? 'Actualizar' : 'Añadir Suplemento'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Lista de suplementos actuales */}
+            {supplements.length > 0 && (
+              <View style={styles.supplementsList}>
+                <Text style={styles.supplementsListTitle}>Suplementos actuales</Text>
+                {supplements.map((supp) => (
+                  <View key={supp.id} style={styles.supplementListItem}>
+                    <View style={styles.supplementListInfo}>
+                      <Text style={styles.supplementListName}>{supp.name}</Text>
+                      <Text style={styles.supplementListDosage}>{supp.dosage}</Text>
+                      {supp.time_of_day && (
+                        <Text style={styles.supplementListTime}>{supp.time_of_day}</Text>
+                      )}
+                    </View>
+                    <View style={styles.supplementListActions}>
+                      <TouchableOpacity onPress={() => editSupplement(supp)} style={styles.supplementListBtn}>
+                        <Ionicons name="pencil" size={18} color={palette.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleDeleteSupplement(supp.id)} style={styles.supplementListBtn}>
+                        <Ionicons name="trash" size={18} color={palette.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Botón flotante de suplementación */}
+      <TouchableOpacity 
+        style={styles.supplementsFab}
+        onPress={() => setShowSupplementsModal(true)}
+      >
+        <Ionicons name="medical" size={24} color="#fff" />
+        {supplements.length > 0 && (
+          <View style={styles.supplementsBadge}>
+            <Text style={styles.supplementsBadgeText}>{supplements.length}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
 
       {/* Custom Alert */}
       <CustomAlert
@@ -2029,5 +2225,135 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 15,
     fontWeight: '600',
+  },
+  // Estilos de Suplementación
+  supplementsFab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#9C27B0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  supplementsBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: palette.primary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  supplementsBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  supplementModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'flex-end',
+  },
+  supplementModalContent: {
+    backgroundColor: palette.surface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: spacing.lg,
+    maxHeight: '90%',
+  },
+  supplementModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  supplementModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: palette.text,
+  },
+  supplementLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: palette.muted,
+    marginBottom: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  supplementInput: {
+    backgroundColor: palette.inputBg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: palette.border,
+    padding: spacing.md,
+    fontSize: 15,
+    color: palette.text,
+  },
+  supplementSaveBtn: {
+    backgroundColor: '#9C27B0',
+    padding: spacing.md,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    marginTop: spacing.lg,
+  },
+  supplementSaveBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  supplementsList: {
+    marginTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: palette.border,
+    paddingTop: spacing.lg,
+  },
+  supplementsListTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: palette.muted,
+    marginBottom: spacing.sm,
+  },
+  supplementListItem: {
+    flexDirection: 'row',
+    backgroundColor: palette.surfaceAlt,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    marginBottom: spacing.sm,
+    alignItems: 'center',
+  },
+  supplementListInfo: {
+    flex: 1,
+  },
+  supplementListName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: palette.text,
+  },
+  supplementListDosage: {
+    fontSize: 13,
+    color: palette.primary,
+    marginTop: 2,
+  },
+  supplementListTime: {
+    fontSize: 12,
+    color: palette.muted,
+    marginTop: 2,
+  },
+  supplementListActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  supplementListBtn: {
+    padding: spacing.xs,
   },
 });

@@ -11,6 +11,7 @@ import workoutsRoutes from './routes/workouts';
 import recipesRoutes from './routes/recipes';
 import progressRoutes from './routes/progress';
 import stepsRoutes from './routes/steps';
+import supplementsRoutes from './routes/supplements';
 import './cron/progressCron'; // Iniciar cron job
 
 dotenv.config();
@@ -40,6 +41,7 @@ app.use('/api/workouts', workoutsRoutes);
 app.use('/api/recipes', recipesRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/steps', stepsRoutes);
+app.use('/api/supplements', supplementsRoutes);
 
 // Start server
 app.listen(PORT, () => {

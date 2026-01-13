@@ -159,6 +159,7 @@ export interface ProgressUpdate {
   front_photo_url: string;
   side_photo_url: string;
   back_photo_url: string;
+  extra_photo_url?: string;
   created_at: string;
 }
 
@@ -186,4 +187,15 @@ export interface RecipeFood {
   category: string;
   quantity: number;
   unit: 'gramos' | 'unidades';
+}
+
+// Suplementación
+export interface Supplement {
+  id: number;
+  client_id: number;
+  name: string;
+  dosage: string;
+  time_of_day: string | null;
+  notes: string | null;
+  created_at: string;
 }
