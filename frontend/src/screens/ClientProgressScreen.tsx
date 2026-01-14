@@ -37,6 +37,9 @@ export default function ClientProgressScreen({ clientId }: Props) {
   // Modal para selección de foto
   const [photoPickerModalVisible, setPhotoPickerModalVisible] = useState(false);
   const [selectedPhotoType, setSelectedPhotoType] = useState<'front' | 'side' | 'back' | 'extra'>('front');
+  
+  // Modal para visualizar foto ampliada
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   const [weight, setWeight] = useState('');
   const [photos, setPhotos] = useState<{
@@ -72,46 +75,62 @@ export default function ClientProgressScreen({ clientId }: Props) {
     }
   };
 
-  const pickImage = async (type: 'front' | 'side' | 'back') => {
+  const pickImage = async (type: 'front' | 'side' | 'back' | 'extra') => {
     setSelectedPhotoType(type);
     setPhotoPickerModalVisible(true);
   };
 
-  const takePhoto = async (type: 'front' | 'side' | 'back') => {
+  const takePhoto = async (type?: 'front' | 'side' | 'back' | 'extra') => {
+    const photoType = type || selectedPhotoType;
     setPhotoPickerModalVisible(false);
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      showWarning('Permiso Denegado', 'Necesitamos acceso a la cámara');
-      return;
-    }
+    
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        showWarning('Permiso Denegado', 'Necesitamos acceso a la cámara');
+        return;
+      }
 
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [3, 4],
-      quality: 0.7,
-    });
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [3, 4],
+        quality: 0.7,
+      });
 
-    if (!result.canceled) {
-      setPhotos((prev) => ({ ...prev, [type]: result.assets[0] }));
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setPhotos((prev) => ({ ...prev, [photoType]: result.assets[0] }));
+      }
+    } catch (error) {
+      console.error('Error al tomar foto:', error);
+      showError('Error', 'No se pudo tomar la foto');
     }
   };
 
-  const chooseFromGallery = async (type: 'front' | 'side' | 'back') => {
+  const chooseFromGallery = async (type?: 'front' | 'side' | 'back' | 'extra') => {
+    const photoType = type || selectedPhotoType;
     setPhotoPickerModalVisible(false);
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      showWarning('Permiso Denegado', 'Necesitamos acceso a tus fotos');
-      return;
-    }
+    
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        showWarning('Permiso Denegado', 'Necesitamos acceso a tus fotos');
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      aspect: [3, 4],
-      quality: 0.7,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [3, 4],
+        quality: 0.7,
+      });
 
-    if (!result.canceled) {
-      setPhotos((prev) => ({ ...prev, [type]: result.assets[0] }));
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setPhotos((prev) => ({ ...prev, [photoType]: result.assets[0] }));
+      }
+    } catch (error) {
+      console.error('Error al elegir foto:', error);
+      showError('Error', 'No se pudo seleccionar la foto');
     }
   };
 
@@ -342,11 +361,35 @@ export default function ClientProgressScreen({ clientId }: Props) {
                   </View>
                 </View>
                 <View style={styles.photoGrid}>
-                  <Image source={{ uri: update.front_photo_url }} style={styles.thumbnail} />
-                  <Image source={{ uri: update.side_photo_url }} style={styles.thumbnail} />
-                  <Image source={{ uri: update.back_photo_url }} style={styles.thumbnail} />
+                  <TouchableOpacity 
+                    style={styles.thumbnailContainer}
+                    onPress={() => setSelectedPhoto(update.front_photo_url)}
+                  >
+                    <Image source={{ uri: update.front_photo_url }} style={styles.thumbnail} />
+                    <Text style={styles.thumbnailLabel}>Frontal</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.thumbnailContainer}
+                    onPress={() => setSelectedPhoto(update.side_photo_url)}
+                  >
+                    <Image source={{ uri: update.side_photo_url }} style={styles.thumbnail} />
+                    <Text style={styles.thumbnailLabel}>Lateral</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.thumbnailContainer}
+                    onPress={() => setSelectedPhoto(update.back_photo_url)}
+                  >
+                    <Image source={{ uri: update.back_photo_url }} style={styles.thumbnail} />
+                    <Text style={styles.thumbnailLabel}>Espalda</Text>
+                  </TouchableOpacity>
                   {update.extra_photo_url && (
-                    <Image source={{ uri: update.extra_photo_url }} style={styles.thumbnail} />
+                    <TouchableOpacity 
+                      style={styles.thumbnailContainer}
+                      onPress={() => setSelectedPhoto(update.extra_photo_url!)}
+                    >
+                      <Image source={{ uri: update.extra_photo_url }} style={styles.thumbnail} />
+                      <Text style={styles.thumbnailLabel}>Extra</Text>
+                    </TouchableOpacity>
                   )}
                 </View>
               </View>
@@ -385,6 +428,30 @@ export default function ClientProgressScreen({ clientId }: Props) {
               <Text style={styles.photoPickerCancelText}>Cancelar</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      {/* Modal para visualizar foto ampliada */}
+      <Modal
+        visible={!!selectedPhoto}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setSelectedPhoto(null)}
+      >
+        <View style={styles.photoViewerOverlay}>
+          <TouchableOpacity 
+            style={styles.photoViewerCloseButton}
+            onPress={() => setSelectedPhoto(null)}
+          >
+            <Ionicons name="close-circle" size={36} color="#fff" />
+          </TouchableOpacity>
+          {selectedPhoto && (
+            <Image 
+              source={{ uri: selectedPhoto }} 
+              style={styles.fullScreenPhoto}
+              resizeMode="contain"
+            />
+          )}
         </View>
       </Modal>
 
@@ -601,11 +668,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  thumbnail: {
+  thumbnailContainer: {
     flex: 1,
+  },
+  thumbnail: {
+    width: '100%',
     height: 100,
     borderRadius: radius.sm,
     backgroundColor: palette.surfaceAlt,
+  },
+  thumbnailLabel: {
+    fontSize: 11,
+    color: palette.muted,
+    textAlign: 'center',
+    marginTop: 4,
   },
   photoPickerOverlay: {
     flex: 1,
@@ -659,5 +735,21 @@ const styles = StyleSheet.create({
     color: palette.muted,
     fontSize: 14,
     fontWeight: '600',
+  },
+  photoViewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoViewerCloseButton: {
+    position: 'absolute',
+    top: 50,
+    right: spacing.lg,
+    zIndex: 10,
+  },
+  fullScreenPhoto: {
+    width: '100%',
+    height: '100%',
   },
 });
