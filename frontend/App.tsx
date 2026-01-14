@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { palette } from './src/theme';
 import LoadingScreen from './src/components/LoadingScreen';
+import { Ionicons } from '@expo/vector-icons';
 
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -67,6 +68,36 @@ function Navigation() {
 }
 
 export default function App() {
+  const [iconsReady, setIconsReady] = React.useState(false);
+  const [iconsError, setIconsError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadIcons() {
+      try {
+        await Ionicons.loadFont();
+        if (!cancelled) setIconsReady(true);
+      } catch (error) {
+        console.error('Error loading Ionicons font:', error);
+        if (!cancelled) setIconsError(String(error));
+      }
+    }
+
+    loadIcons();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (iconsError) {
+    return <LoadingScreen message="Error cargando iconos" />;
+  }
+
+  if (!iconsReady) {
+    return <LoadingScreen message="Cargando..." />;
+  }
+
   return (
     <AuthProvider>
       <Navigation />

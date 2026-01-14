@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "fd2ad0e7-d3dc-4374-ad4e-3e3a2f0fcab0"
+      }
+    },
+    "android": {
+      "package": "com.rubenrubio.appfitness"
+    }
+  }
+}

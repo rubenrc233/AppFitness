@@ -38,7 +38,8 @@
           "photosPermission": "La aplicación accede a tus fotos para subir actualizaciones de progreso.",
           "cameraPermission": "La aplicación accede a tu cámara para tomar fotos de progreso."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "web": {
       "favicon": "./assets/favicon.png"
