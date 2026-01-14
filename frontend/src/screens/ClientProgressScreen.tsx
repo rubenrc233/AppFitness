@@ -11,7 +11,7 @@ import {
   Modal,
   ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '../components/AppIcon';
 import * as ImagePicker from 'expo-image-picker';
 import LoadingScreen from '../components/LoadingScreen';
 import AppHeader from '../components/AppHeader';

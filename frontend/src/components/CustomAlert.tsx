@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { palette, spacing, radius } from '../theme';
+import { AppIcon } from './AppIcon';
 
 type AlertType = 'success' | 'error' | 'warning' | 'info' | 'confirm';
 
@@ -80,7 +80,7 @@ export default function CustomAlert({
             <View style={styles.alertContainer}>
               {/* Icono */}
               <View style={[styles.iconContainer, { backgroundColor: config.bgColor }]}>
-                <Ionicons name={config.icon} size={32} color={config.color} />
+                <AppIcon name={config.icon} size={32} color={config.color} />
               </View>
 
               {/* Título */}

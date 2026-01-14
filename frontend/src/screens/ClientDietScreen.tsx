@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { dietService, supplementsService } from '../services/api';
 import { Diet, MealOption, OptionFood, Supplement } from '../types';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '../components/AppIcon';
 import LoadingScreen from '../components/LoadingScreen';
 import AppHeader from '../components/AppHeader';
 import { palette, spacing, radius, typography } from '../theme';
@@ -136,6 +136,22 @@ export default function ClientDietScreen({ clientId, navigation }: Props) {
         sugar: totals.sugar + (food.sugar_per_100g || 0) * multiplier,
       };
     }, { protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0 });
+  };
+
+  const formatSupplementDosage = (dosage: string) => {
+    const value = (dosage ?? '').trim();
+    if (!value) return '';
+
+    // If it's only a number, add a default unit label so it doesn't look like an unexplained badge.
+    if (/^\d+(?:[\.,]\d+)?$/.test(value)) {
+      const normalized = value.replace(',', '.');
+      const numberValue = Number(normalized);
+      const isSingular = Number.isFinite(numberValue) ? numberValue === 1 : value === '1';
+      return `${value} ${isSingular ? 'unidad' : 'unidades'}`;
+    }
+
+    // Otherwise assume the admin already included units (g, ml, caps, etc.)
+    return value;
   };
 
   if (loading) {
@@ -297,15 +313,19 @@ export default function ClientDietScreen({ clientId, navigation }: Props) {
             {/* Sección de Suplementación */}
             {supplements.length > 0 && (
               <View style={styles.supplementsSection}>
-                <Text style={styles.supplementsTitle}>💊 Suplementación</Text>
+                <Text style={styles.supplementsTitle}>Suplementación</Text>
                 {supplements.map((supplement) => (
                   <View key={supplement.id} style={styles.supplementCard}>
-                    <View style={styles.supplementHeader}>
-                      <Text style={styles.supplementName}>{supplement.name}</Text>
-                      <Text style={styles.supplementDosage}>{supplement.dosage}</Text>
-                    </View>
+                    <Text style={styles.supplementName}>{supplement.name}</Text>
+                    <Text style={styles.supplementDetail}>
+                      <Text style={styles.supplementDetailLabel}>Dosis:</Text>{' '}
+                      {formatSupplementDosage(supplement.dosage)}
+                    </Text>
                     {supplement.time_of_day && (
-                      <Text style={styles.supplementTime}>⏰ {supplement.time_of_day}</Text>
+                      <Text style={styles.supplementDetail}>
+                        <Text style={styles.supplementDetailLabel}>Momento:</Text>{' '}
+                        {supplement.time_of_day}
+                      </Text>
                     )}
                     {supplement.notes && (
                       <Text style={styles.supplementNotes}>{supplement.notes}</Text>
@@ -613,30 +633,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.border,
   },
-  supplementHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
   supplementName: {
     fontSize: 16,
     fontWeight: '600',
     color: palette.text,
     flex: 1,
   },
-  supplementDosage: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: palette.primary,
-    backgroundColor: palette.primaryMuted,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-  },
-  supplementTime: {
+  supplementDetail: {
     fontSize: 13,
     color: palette.muted,
     marginTop: spacing.xs,
+  },
+  supplementDetailLabel: {
+    fontWeight: '700',
+    color: palette.textWarm,
   },
   supplementNotes: {
     fontSize: 13,

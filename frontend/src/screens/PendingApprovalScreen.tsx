@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '../components/AppIcon';
 import { palette, spacing, radius } from '../theme';
 
 export default function PendingApprovalScreen() {

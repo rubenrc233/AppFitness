@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { palette, spacing } from '../theme';
+import { AppIcon } from './AppIcon';
 
 interface LoadingScreenProps {
   message?: string;
@@ -64,7 +64,7 @@ export default function LoadingScreen({ message }: LoadingScreenProps) {
             { transform: [{ scale: pulseAnim }] }
           ]}
         >
-          <Ionicons name="flame" size={64} color={palette.primary} />
+          <AppIcon name="flame" size={64} color={palette.primary} />
         </Animated.View>
         
         <Text style={styles.title}>EL INCINERADOR</Text>

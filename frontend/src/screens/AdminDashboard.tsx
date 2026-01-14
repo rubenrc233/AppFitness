@@ -3,7 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Tex
 import { useAuth } from '../context/AuthContext';
 import { clientService } from '../services/api';
 import { Client } from '../types';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '../components/AppIcon';
 import { palette, spacing, radius, typography } from '../theme';
 import CustomAlert, { useCustomAlert } from '../components/CustomAlert';
 

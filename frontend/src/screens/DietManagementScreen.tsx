@@ -9,7 +9,7 @@ import {
   Modal,
   Image,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '../components/AppIcon';
 import LoadingScreen from '../components/LoadingScreen';
 import { dietService, supplementsService } from '../services/api';
 import { Diet, DietMeal, MealOption, OptionFood, FoodItem, Supplement } from '../types';

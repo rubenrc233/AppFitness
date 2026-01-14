@@ -9,7 +9,7 @@ import {
   Modal,
   Dimensions,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '../components/AppIcon';
 import LoadingScreen from '../components/LoadingScreen';
 import { LineChart } from 'react-native-chart-kit';
 import { progressService } from '../services/api';

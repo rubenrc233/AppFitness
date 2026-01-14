@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { Pedometer } from 'expo-sensors';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '../components/AppIcon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppHeader from '../components/AppHeader';
 import { stepsService } from '../services/api';

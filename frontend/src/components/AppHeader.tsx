@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { palette, spacing } from '../theme';
+import { AppIcon } from './AppIcon';
 
 interface Props {
   title?: string;
@@ -11,7 +11,7 @@ export default function AppHeader({ title }: Props) {
   return (
     <View style={styles.header}>
       <View style={styles.logoContainer}>
-        <Ionicons name="flame" size={16} color={palette.text} />
+        <AppIcon name="flame" size={16} color={palette.text} />
       </View>
       {title && <Text style={styles.title}>{title}</Text>}
     </View>

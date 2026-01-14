@@ -1,7 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 import StepsScreen from './StepsScreen';
 import ClientDietScreen from './ClientDietScreen';
 import ClientMealOptionsScreen from './ClientMealOptionsScreen';
@@ -11,6 +10,7 @@ import WorkoutScreen from './WorkoutScreen';
 import SettingsScreen from './SettingsScreen';
 import { useAuth } from '../context/AuthContext';
 import { palette } from '../theme';
+import { AppIcon } from '../components/AppIcon';
 
 const Tab = createBottomTabNavigator();
 const ExerciseStack = createNativeStackNavigator();
@@ -74,7 +74,7 @@ export default function ClientHomeScreen() {
         options={{
           tabBarLabel: 'Pasos',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="footsteps-outline" size={size} color={color} />
+            <AppIcon name="footsteps-outline" size={size} color={color} />
           ),
         }}
       />
@@ -84,7 +84,7 @@ export default function ClientHomeScreen() {
         options={{
           tabBarLabel: 'Dieta',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="nutrition-outline" size={size} color={color} />
+            <AppIcon name="nutrition-outline" size={size} color={color} />
           ),
         }}
       />
@@ -94,7 +94,7 @@ export default function ClientHomeScreen() {
         options={{
           tabBarLabel: 'Ejercicio',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="barbell-outline" size={size} color={color} />
+            <AppIcon name="barbell-outline" size={size} color={color} />
           ),
         }}
       />
@@ -104,7 +104,7 @@ export default function ClientHomeScreen() {
         options={{
           tabBarLabel: 'Progreso',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="stats-chart-outline" size={size} color={color} />
+            <AppIcon name="stats-chart-outline" size={size} color={color} />
           ),
         }}
       />
@@ -114,7 +114,7 @@ export default function ClientHomeScreen() {
         options={{
           tabBarLabel: 'Ajustes',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
+            <AppIcon name="settings-outline" size={size} color={color} />
           ),
         }}
       />

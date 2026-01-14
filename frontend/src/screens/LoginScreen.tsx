@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '../components/AppIcon';
 import { palette, spacing, radius } from '../theme';
 import CustomAlert, { useCustomAlert } from '../components/CustomAlert';
 import LoadingScreen from '../components/LoadingScreen';

@@ -9,7 +9,7 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '../components/AppIcon';
 import { palette, spacing, radius, typography } from '../theme';
 import { routineService } from '../services/api';
 import { Routine, RoutineDay, ExerciseLibrary, DayExercise } from '../types';

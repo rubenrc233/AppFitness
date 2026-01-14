@@ -9,7 +9,7 @@ import {
   Modal,
   ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '../components/AppIcon';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/api';
 import { palette, radius, spacing, typography } from '../theme';

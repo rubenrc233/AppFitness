@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions
 import { LinearGradient } from 'expo-linear-gradient';
 import LoadingScreen from '../components/LoadingScreen';
 import AppHeader from '../components/AppHeader';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '../components/AppIcon';
 import { routineService } from '../services/api';
 import { RoutineDay, DayExercise } from '../types';
 import { palette, spacing, radius, typography } from '../theme';
