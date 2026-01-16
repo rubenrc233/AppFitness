@@ -49,9 +49,17 @@ export default function StepsScreen() {
 
   useEffect(() => {
     loadDailyGoal();
-    checkPedometerAvailability();
-    loadTodaySteps();
     loadWeeklySteps();
+
+    // IMPORTANTE: cargar lo guardado ANTES de arrancar el podómetro.
+    // Si no, loadTodaySteps() puede pisar el valor calculado por sensor con 0.
+    const init = async () => {
+      const saved = await loadTodaySteps();
+      baselineTodayStepsRef.current = saved;
+      await checkPedometerAvailability();
+    };
+
+    void init();
     
     return () => {
       subscriptionRef.current?.remove?.();
@@ -168,7 +176,7 @@ export default function StepsScreen() {
         // En algunos dispositivos/roms el histórico puede fallar puntualmente.
         // Nunca bajamos el contador por debajo de lo ya guardado.
         const sensorSteps = result.steps ?? 0;
-        const merged = Math.max(sensorSteps, savedSteps);
+        const merged = Math.max(sensorSteps, savedSteps, baselineTodayStepsRef.current);
 
         baselineTodayStepsRef.current = merged;
         setTodaySteps(merged);
@@ -210,16 +218,22 @@ export default function StepsScreen() {
     }
   };
 
-  const loadTodaySteps = async () => {
+  const loadTodaySteps = async (): Promise<number> => {
     try {
       const todayKey = getLocalDateKey(new Date());
       const saved = await AsyncStorage.getItem(`steps_${todayKey}`);
       if (saved) {
-        setTodaySteps(parseInt(saved, 10));
+        const parsed = parseInt(saved, 10);
+        const value = Number.isFinite(parsed) ? parsed : 0;
+        setTodaySteps(value);
+        return value;
       }
     } catch (error) {
       console.error('Error loading today steps:', error);
     }
+
+    setTodaySteps(0);
+    return 0;
   };
 
   const loadWeeklySteps = async () => {
