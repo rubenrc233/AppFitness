@@ -69,6 +69,8 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
   const [selectedDayWeekday, setSelectedDayWeekday] = useState<number>(0);
   const [dayExercises, setDayExercises] = useState<DayExercise[]>([]);
   const [dayNotes, setDayNotes] = useState('');
+  const [dayModalDirty, setDayModalDirty] = useState(false);
+  const [dayModalSaving, setDayModalSaving] = useState(false);
 
   // Add exercise states
   const [selectedExercise, setSelectedExercise] = useState<ExerciseLibrary | null>(null);
@@ -315,6 +317,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
     setSelectedDay(day);
     setSelectedDayWeekday(day.weekday ?? 0);
     setDayNotes(day.notes || '');
+    setDayModalDirty(false);
     loadDayExercises(day.id);
     loadMuscleGroups();
     loadExerciseLibrary();
@@ -325,17 +328,31 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
     setViewDayModalVisible(true);
   };
 
-  const handleUpdateDay = async () => {
-    if (!selectedDay) return;
+  const handleUpdateDay = async (overrides?: { weekday?: number; notes?: string }) => {
+    if (!selectedDay) return false;
+
+    const nextWeekday = overrides?.weekday ?? selectedDayWeekday;
+    const nextNotes = overrides?.notes ?? dayNotes;
+    const currentWeekday = selectedDay.weekday ?? 0;
+    const currentNotes = selectedDay.notes || '';
+
+    // Evitar llamadas innecesarias
+    if (nextWeekday === currentWeekday && nextNotes === currentNotes) {
+      return true;
+    }
 
     try {
       await routineService.updateDay(selectedDay.id, {
         name: selectedDay.name,
-        notes: dayNotes,
-        weekday: selectedDayWeekday,
+        notes: nextNotes,
+        weekday: nextWeekday,
       });
 
-      const updatedDay = { ...selectedDay, notes: dayNotes, weekday: selectedDayWeekday };
+      // Mantener el state consistente aunque el setState sea async
+      setSelectedDayWeekday(nextWeekday);
+      setDayNotes(nextNotes);
+
+      const updatedDay = { ...selectedDay, notes: nextNotes, weekday: nextWeekday };
       setSelectedDay(updatedDay);
 
       if (routine && routine.days) {
@@ -346,9 +363,50 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
       }
 
       setNeedsSave(true);
+      return true;
     } catch (error) {
       console.error('Error updating day:', error);
       showError('Error', 'No se pudo actualizar el día');
+      return false;
+    }
+  };
+
+  const closeDayModal = async () => {
+    if (!dayModalDirty) {
+      setViewDayModalVisible(false);
+      return;
+    }
+
+    showConfirm(
+      'Guardar cambios',
+      'Tienes cambios sin guardar. ¿Quieres guardarlos antes de salir?',
+      async () => {
+        hideAlert();
+        await saveDayModal();
+      },
+      () => {
+        hideAlert();
+        setDayModalDirty(false);
+        setViewDayModalVisible(false);
+      },
+      'Guardar',
+      'Salir sin guardar'
+    );
+  };
+
+  const saveDayModal = async () => {
+    if (dayModalSaving) return;
+    setDayModalSaving(true);
+    try {
+      const ok = await handleUpdateDay();
+      if (ok) {
+        // Refrescar por si el título/listado depende de weekday
+        await loadRoutine();
+        setDayModalDirty(false);
+        setViewDayModalVisible(false);
+      }
+    } finally {
+      setDayModalSaving(false);
     }
   };
 
@@ -375,6 +433,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
       setExerciseReps('12');
       setExerciseNotes('');
       setNeedsSave(true);
+      setDayModalDirty(true);
       loadDayExercises(selectedDay.id);
     } catch (error) {
       console.error('Error adding exercise:', error);
@@ -387,6 +446,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
       await routineService.deleteDayExercise(exerciseId);
       if (selectedDay) {
         setNeedsSave(true);
+        setDayModalDirty(true);
         loadDayExercises(selectedDay.id);
       }
     } catch (error) {
@@ -1042,15 +1102,21 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
       <Modal visible={viewDayModalVisible} animationType="slide" transparent={false}>
         <View style={styles.wizardContainer}>
           <View style={styles.wizardHeader}>
-            <TouchableOpacity onPress={() => setViewDayModalVisible(false)} style={styles.wizardCloseButton}>
+            <TouchableOpacity onPress={() => void closeDayModal()} style={styles.wizardCloseButton}>
               <Ionicons name="close" size={24} color={palette.text} />
             </TouchableOpacity>
             <Text style={styles.wizardHeaderTitle}>
-              {selectedDay?.weekday !== undefined && selectedDay?.weekday !== null 
-                ? WEEKDAYS[selectedDay.weekday] 
+              {typeof selectedDayWeekday === 'number'
+                ? WEEKDAYS[selectedDayWeekday]
                 : `Día ${selectedDay?.day_number}`}
             </Text>
-            <View style={{ width: 40 }} />
+            <TouchableOpacity
+              onPress={() => void saveDayModal()}
+              style={[styles.wizardSaveButton, (!dayModalDirty || dayModalSaving) && styles.wizardSaveButtonDisabled]}
+              disabled={!dayModalDirty || dayModalSaving}
+            >
+              <Ionicons name="checkmark" size={22} color={palette.text} />
+            </TouchableOpacity>
           </View>
 
           <ScrollView 
@@ -1082,6 +1148,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                       ]}
                       onPress={() => {
                         setSelectedDayWeekday(index);
+                        setDayModalDirty(true);
                       }}
                     >
                       <Text
@@ -1105,8 +1172,10 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                   placeholder="Observaciones para este día..."
                   placeholderTextColor={palette.mutedAlt}
                   value={dayNotes}
-                  onChangeText={setDayNotes}
-                  onBlur={handleUpdateDay}
+                  onChangeText={(text) => {
+                    setDayNotes(text);
+                    setDayModalDirty(true);
+                  }}
                   multiline
                 />
               </View>
@@ -2185,6 +2254,18 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surface,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  wizardSaveButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: palette.success,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wizardSaveButtonDisabled: {
+    opacity: 0.5,
+    backgroundColor: palette.surface,
   },
   wizardHeaderTitle: {
     ...typography.title,
