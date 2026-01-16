@@ -8,6 +8,8 @@ import {
   TextInput,
   Modal,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { AppIcon as Ionicons } from '../components/AppIcon';
 import LoadingScreen from '../components/LoadingScreen';
@@ -717,7 +719,13 @@ export default function DietManagementScreen({ route, navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.wizardContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.wizardContent}
+              contentContainerStyle={styles.wizardContentContainer}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
+              keyboardShouldPersistTaps="handled"
+            >
               {/* Lista de opciones - La primera ya viene creada */}
               {wizardOptions.map((option, optIndex) => (
                 <View 
@@ -818,7 +826,11 @@ export default function DietManagementScreen({ route, navigation }: any) {
                       </View>
 
                       {/* Lista de alimentos - Un tap añade directamente */}
-                      <ScrollView style={styles.wizardFoodLibrary} nestedScrollEnabled>
+                      <ScrollView
+                        style={styles.wizardFoodLibrary}
+                        nestedScrollEnabled
+                        keyboardShouldPersistTaps="handled"
+                      >
                         {filteredFoods.slice(0, 20).map((food) => (
                           <TouchableOpacity
                             key={food.id}
@@ -1001,91 +1013,102 @@ export default function DietManagementScreen({ route, navigation }: any) {
         }}
       >
         <View style={styles.supplementModalOverlay}>
-          <View style={styles.supplementModalContent}>
-            <View style={styles.supplementModalHeader}>
-              <Text style={styles.supplementModalTitle}>
-                {editingSupplementId ? 'Editar Suplemento' : 'Añadir Suplemento'}
-              </Text>
-              <TouchableOpacity onPress={() => {
-                setShowSupplementsModal(false);
-                resetSupplementForm();
-              }}>
-                <Ionicons name="close" size={28} color={palette.text} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.supplementLabel}>Nombre *</Text>
-            <TextInput
-              style={styles.supplementInput}
-              placeholder="Ej: Proteína Whey"
-              placeholderTextColor={palette.muted}
-              value={supplementName}
-              onChangeText={setSupplementName}
-            />
-
-            <Text style={styles.supplementLabel}>Dosis *</Text>
-            <TextInput
-              style={styles.supplementInput}
-              placeholder="Ej: 30g / 2 cápsulas"
-              placeholderTextColor={palette.muted}
-              value={supplementDosage}
-              onChangeText={setSupplementDosage}
-            />
-
-            <Text style={styles.supplementLabel}>Momento del día</Text>
-            <TextInput
-              style={styles.supplementInput}
-              placeholder="Ej: Desayuno, Post-entreno, Antes de dormir"
-              placeholderTextColor={palette.muted}
-              value={supplementTime}
-              onChangeText={setSupplementTime}
-            />
-
-            <Text style={styles.supplementLabel}>Notas</Text>
-            <TextInput
-              style={[styles.supplementInput, { height: 80, textAlignVertical: 'top' }]}
-              placeholder="Instrucciones adicionales..."
-              placeholderTextColor={palette.muted}
-              value={supplementNotes}
-              onChangeText={setSupplementNotes}
-              multiline
-            />
-
-            <TouchableOpacity 
-              style={styles.supplementSaveBtn}
-              onPress={handleAddSupplement}
-            >
-              <Text style={styles.supplementSaveBtnText}>
-                {editingSupplementId ? 'Actualizar' : 'Añadir Suplemento'}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Lista de suplementos actuales */}
-            {supplements.length > 0 && (
-              <View style={styles.supplementsList}>
-                <Text style={styles.supplementsListTitle}>Suplementos actuales</Text>
-                {supplements.map((supp) => (
-                  <View key={supp.id} style={styles.supplementListItem}>
-                    <View style={styles.supplementListInfo}>
-                      <Text style={styles.supplementListName}>{supp.name}</Text>
-                      <Text style={styles.supplementListDosage}>{supp.dosage}</Text>
-                      {supp.time_of_day && (
-                        <Text style={styles.supplementListTime}>{supp.time_of_day}</Text>
-                      )}
-                    </View>
-                    <View style={styles.supplementListActions}>
-                      <TouchableOpacity onPress={() => editSupplement(supp)} style={styles.supplementListBtn}>
-                        <Ionicons name="pencil" size={18} color={palette.primary} />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleDeleteSupplement(supp.id)} style={styles.supplementListBtn}>
-                        <Ionicons name="trash" size={18} color={palette.danger} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <View style={styles.supplementModalContent}>
+              <View style={styles.supplementModalHeader}>
+                <Text style={styles.supplementModalTitle}>
+                  {editingSupplementId ? 'Editar Suplemento' : 'Añadir Suplemento'}
+                </Text>
+                <TouchableOpacity onPress={() => {
+                  setShowSupplementsModal(false);
+                  resetSupplementForm();
+                }}>
+                  <Ionicons name="close" size={28} color={palette.text} />
+                </TouchableOpacity>
               </View>
-            )}
-          </View>
+
+              <ScrollView
+                style={styles.supplementModalScroll}
+                contentContainerStyle={styles.supplementModalScrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                <Text style={styles.supplementLabel}>Nombre *</Text>
+                <TextInput
+                  style={styles.supplementInput}
+                  placeholder="Ej: Proteína Whey"
+                  placeholderTextColor={palette.muted}
+                  value={supplementName}
+                  onChangeText={setSupplementName}
+                />
+
+                <Text style={styles.supplementLabel}>Dosis *</Text>
+                <TextInput
+                  style={styles.supplementInput}
+                  placeholder="Ej: 30g / 2 cápsulas"
+                  placeholderTextColor={palette.muted}
+                  value={supplementDosage}
+                  onChangeText={setSupplementDosage}
+                />
+
+                <Text style={styles.supplementLabel}>Momento del día</Text>
+                <TextInput
+                  style={styles.supplementInput}
+                  placeholder="Ej: Desayuno, Post-entreno, Antes de dormir"
+                  placeholderTextColor={palette.muted}
+                  value={supplementTime}
+                  onChangeText={setSupplementTime}
+                />
+
+                <Text style={styles.supplementLabel}>Notas</Text>
+                <TextInput
+                  style={[styles.supplementInput, { height: 80, textAlignVertical: 'top' }]}
+                  placeholder="Instrucciones adicionales..."
+                  placeholderTextColor={palette.muted}
+                  value={supplementNotes}
+                  onChangeText={setSupplementNotes}
+                  multiline
+                />
+
+                <TouchableOpacity 
+                  style={styles.supplementSaveBtn}
+                  onPress={handleAddSupplement}
+                >
+                  <Text style={styles.supplementSaveBtnText}>
+                    {editingSupplementId ? 'Actualizar' : 'Añadir Suplemento'}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Lista de suplementos actuales */}
+                {supplements.length > 0 && (
+                  <View style={styles.supplementsList}>
+                    <Text style={styles.supplementsListTitle}>Suplementos actuales</Text>
+                    {supplements.map((supp) => (
+                      <View key={supp.id} style={styles.supplementListItem}>
+                        <View style={styles.supplementListInfo}>
+                          <Text style={styles.supplementListName}>{supp.name}</Text>
+                          <Text style={styles.supplementListDosage}>{supp.dosage}</Text>
+                          {supp.time_of_day && (
+                            <Text style={styles.supplementListTime}>{supp.time_of_day}</Text>
+                          )}
+                        </View>
+                        <View style={styles.supplementListActions}>
+                          <TouchableOpacity onPress={() => editSupplement(supp)} style={styles.supplementListBtn}>
+                            <Ionicons name="pencil" size={18} color={palette.primary} />
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => handleDeleteSupplement(supp.id)} style={styles.supplementListBtn}>
+                            <Ionicons name="trash" size={18} color={palette.danger} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
@@ -1734,8 +1757,11 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   wizardContent: {
-    padding: spacing.lg,
     flex: 1,
+  },
+  wizardContentContainer: {
+    padding: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   wizardSection: {
     marginBottom: spacing.lg,
@@ -2280,7 +2306,14 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     padding: spacing.lg,
-    maxHeight: '90%',
+    height: '90%',
+  },
+  supplementModalScroll: {
+    flex: 1,
+    minHeight: 0,
+  },
+  supplementModalScrollContent: {
+    paddingBottom: spacing.xl,
   },
   supplementModalHeader: {
     flexDirection: 'row',

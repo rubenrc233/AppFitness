@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
+  PermissionsAndroid,
+  Linking,
 } from 'react-native';
 import { Pedometer } from 'expo-sensors';
 import { AppIcon as Ionicons } from '../components/AppIcon';
@@ -30,7 +32,9 @@ export default function StepsScreen() {
   const [currentSteps, setCurrentSteps] = useState(0);
   const [todaySteps, setTodaySteps] = useState(0);
   const [weeklySteps, setWeeklySteps] = useState<DaySteps[]>([]);
-  const [subscription, setSubscription] = useState<any>(null);
+  const subscriptionRef = useRef<any>(null);
+  const baselineTodayStepsRef = useRef<number>(0);
+  const [isActivityPermissionBlocked, setIsActivityPermissionBlocked] = useState(false);
   const [dailyGoal, setDailyGoal] = useState(DEFAULT_DAILY_GOAL);
 
   useEffect(() => {
@@ -40,11 +44,44 @@ export default function StepsScreen() {
     loadWeeklySteps();
     
     return () => {
-      if (subscription) {
-        subscription.remove();
-      }
+      subscriptionRef.current?.remove?.();
+      subscriptionRef.current = null;
     };
   }, []);
+
+  const ensureActivityRecognitionPermission = async (): Promise<boolean> => {
+    if (Platform.OS !== 'android') return true;
+
+    const sdkInt = typeof Platform.Version === 'number' ? Platform.Version : parseInt(String(Platform.Version), 10);
+    if (!Number.isFinite(sdkInt) || sdkInt < 29) {
+      // Android < 10 no requiere ACTIVITY_RECOGNITION
+      return true;
+    }
+
+    const permission = PermissionsAndroid.PERMISSIONS.ACTIVITY_RECOGNITION;
+
+    try {
+      const alreadyGranted = await PermissionsAndroid.check(permission);
+      if (alreadyGranted) {
+        setIsActivityPermissionBlocked(false);
+        return true;
+      }
+
+      const result = await PermissionsAndroid.request(permission, {
+        title: 'Permiso para contar pasos',
+        message: 'Necesitamos permiso de actividad física para registrar tus pasos.',
+        buttonPositive: 'Permitir',
+        buttonNegative: 'Cancelar',
+      });
+
+      const granted = result === PermissionsAndroid.RESULTS.GRANTED;
+      setIsActivityPermissionBlocked(result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN);
+      return granted;
+    } catch (error) {
+      console.error('Error requesting ACTIVITY_RECOGNITION:', error);
+      return false;
+    }
+  };
 
   const loadDailyGoal = async () => {
     if (!user) return;
@@ -61,6 +98,12 @@ export default function StepsScreen() {
 
   const checkPedometerAvailability = async () => {
     try {
+      const hasPermission = await ensureActivityRecognitionPermission();
+      if (!hasPermission) {
+        setIsPedometerAvailable('permissionDenied');
+        return;
+      }
+
       const isAvailable = await Pedometer.isAvailableAsync();
       setIsPedometerAvailable(isAvailable ? 'available' : 'unavailable');
       
@@ -81,6 +124,7 @@ export default function StepsScreen() {
     try {
       const result = await Pedometer.getStepCountAsync(midnight, now);
       if (result) {
+        baselineTodayStepsRef.current = result.steps;
         setTodaySteps(result.steps);
         saveTodaySteps(result.steps);
       }
@@ -90,16 +134,19 @@ export default function StepsScreen() {
   };
 
   const startPedometer = () => {
+    // Evitar duplicar suscripciones
+    subscriptionRef.current?.remove?.();
+
     const sub = Pedometer.watchStepCount(result => {
       setCurrentSteps(result.steps);
-      // Actualizar pasos de hoy sumando los nuevos
-      setTodaySteps(prev => {
-        const newTotal = prev + result.steps;
-        saveTodaySteps(newTotal);
-        return newTotal;
-      });
+
+      // `result.steps` suele ser el conteo desde que se inició la suscripción.
+      // Sumamos a la base obtenida desde medianoche para no duplicar.
+      const newTotal = baselineTodayStepsRef.current + result.steps;
+      setTodaySteps(newTotal);
+      saveTodaySteps(newTotal);
     });
-    setSubscription(sub);
+    subscriptionRef.current = sub;
   };
 
   const saveTodaySteps = async (steps: number) => {
@@ -190,6 +237,28 @@ export default function StepsScreen() {
             <Text style={styles.statusTextWarning}>
               El podómetro no está disponible en este dispositivo
             </Text>
+          </View>
+        )}
+
+        {isPedometerAvailable === 'permissionDenied' && (
+          <View style={[styles.statusCard, styles.statusWarning, styles.permissionCard]}>
+            <Ionicons name="lock-closed-outline" size={24} color="#F59E0B" />
+            <View style={styles.permissionTextContainer}>
+              <Text style={styles.statusTextWarning}>
+                Permiso de actividad física denegado
+              </Text>
+              <Text style={styles.permissionHint}>
+                {isActivityPermissionBlocked
+                  ? 'Actívalo en Ajustes para contar pasos.'
+                  : 'Permite el acceso para poder contar pasos.'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.permissionButton}
+              onPress={() => Linking.openSettings()}
+            >
+              <Text style={styles.permissionButtonText}>Ajustes</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -317,6 +386,30 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
     fontSize: 14,
     flex: 1,
+  },
+  permissionCard: {
+    alignItems: 'flex-start',
+  },
+  permissionTextContainer: {
+    flex: 1,
+  },
+  permissionHint: {
+    color: '#B45309',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  permissionButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.5)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+  },
+  permissionButtonText: {
+    color: '#B45309',
+    fontSize: 12,
+    fontWeight: '700',
   },
   mainCard: {
     backgroundColor: palette.surface,

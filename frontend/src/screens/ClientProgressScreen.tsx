@@ -10,6 +10,8 @@ import {
   Dimensions,
   Modal,
   ActivityIndicator,
+  Linking,
+  Platform,
 } from 'react-native';
 import { AppIcon as Ionicons } from '../components/AppIcon';
 import * as ImagePicker from 'expo-image-picker';
@@ -32,7 +34,7 @@ export default function ClientProgressScreen({ clientId }: Props) {
   const [history, setHistory] = useState<ProgressUpdate[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const { alertState, hideAlert, showSuccess, showError, showWarning } = useCustomAlert();
+  const { alertState, hideAlert, showAlert, showSuccess, showError, showWarning } = useCustomAlert();
   
   // Modal para selección de foto
   const [photoPickerModalVisible, setPhotoPickerModalVisible] = useState(false);
@@ -85,25 +87,44 @@ export default function ClientProgressScreen({ clientId }: Props) {
     setPhotoPickerModalVisible(false);
     
     try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        showWarning('Permiso Denegado', 'Necesitamos acceso a la cámara');
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        if (permission.canAskAgain === false) {
+          showAlert(
+            'warning',
+            'Permiso de cámara bloqueado',
+            'Activa el permiso de cámara en Ajustes para poder tomar fotos.',
+            [
+              { text: 'Cancelar', style: 'cancel', onPress: hideAlert },
+              { text: 'Abrir ajustes', onPress: async () => { await Linking.openSettings(); hideAlert(); } },
+            ]
+          );
+        } else {
+          showWarning('Permiso Denegado', 'Necesitamos acceso a la cámara');
+        }
         return;
       }
 
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [3, 4],
+        // En Android, algunos dispositivos fallan al abrir el editor/crop del sistema.
+        // En iOS suele funcionar bien.
+        allowsEditing: Platform.OS === 'ios',
+        aspect: Platform.OS === 'ios' ? [3, 4] : undefined,
         quality: 0.7,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
+      if (result.canceled) return;
+      if (result.assets && result.assets.length > 0 && result.assets[0]?.uri) {
         setPhotos((prev) => ({ ...prev, [photoType]: result.assets[0] }));
+        return;
       }
+
+      showError('Error', 'No se pudo obtener la foto seleccionada');
     } catch (error) {
       console.error('Error al tomar foto:', error);
-      showError('Error', 'No se pudo tomar la foto');
+      const message = (error as any)?.message ? String((error as any).message) : String(error);
+      showError('Error', `No se pudo tomar la foto (${message})`);
     }
   };
 
@@ -112,25 +133,42 @@ export default function ClientProgressScreen({ clientId }: Props) {
     setPhotoPickerModalVisible(false);
     
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        showWarning('Permiso Denegado', 'Necesitamos acceso a tus fotos');
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        if (permission.canAskAgain === false) {
+          showAlert(
+            'warning',
+            'Permiso de fotos bloqueado',
+            'Activa el permiso de fotos/galería en Ajustes para poder seleccionar imágenes.',
+            [
+              { text: 'Cancelar', style: 'cancel', onPress: hideAlert },
+              { text: 'Abrir ajustes', onPress: async () => { await Linking.openSettings(); hideAlert(); } },
+            ]
+          );
+        } else {
+          showWarning('Permiso Denegado', 'Necesitamos acceso a tus fotos');
+        }
         return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [3, 4],
+        allowsEditing: Platform.OS === 'ios',
+        aspect: Platform.OS === 'ios' ? [3, 4] : undefined,
         quality: 0.7,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
+      if (result.canceled) return;
+      if (result.assets && result.assets.length > 0 && result.assets[0]?.uri) {
         setPhotos((prev) => ({ ...prev, [photoType]: result.assets[0] }));
+        return;
       }
+
+      showError('Error', 'No se pudo obtener la imagen seleccionada');
     } catch (error) {
       console.error('Error al elegir foto:', error);
-      showError('Error', 'No se pudo seleccionar la foto');
+      const message = (error as any)?.message ? String((error as any).message) : String(error);
+      showError('Error', `No se pudo seleccionar la foto (${message})`);
     }
   };
 
