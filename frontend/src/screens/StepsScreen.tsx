@@ -9,6 +9,7 @@ import {
   Platform,
   PermissionsAndroid,
   Linking,
+  AppState,
 } from 'react-native';
 import { Pedometer } from 'expo-sensors';
 import { AppIcon as Ionicons } from '../components/AppIcon';
@@ -26,6 +27,13 @@ interface DaySteps {
   steps: number;
 }
 
+const getLocalDateKey = (date: Date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function StepsScreen() {
   const { user } = useAuth();
   const [isPedometerAvailable, setIsPedometerAvailable] = useState<string>('checking');
@@ -34,6 +42,8 @@ export default function StepsScreen() {
   const [weeklySteps, setWeeklySteps] = useState<DaySteps[]>([]);
   const subscriptionRef = useRef<any>(null);
   const baselineTodayStepsRef = useRef<number>(0);
+  const todayStepsRef = useRef<number>(0);
+  const appStateRef = useRef(AppState.currentState);
   const [isActivityPermissionBlocked, setIsActivityPermissionBlocked] = useState(false);
   const [dailyGoal, setDailyGoal] = useState(DEFAULT_DAILY_GOAL);
 
@@ -47,6 +57,32 @@ export default function StepsScreen() {
       subscriptionRef.current?.remove?.();
       subscriptionRef.current = null;
     };
+  }, []);
+
+  useEffect(() => {
+    todayStepsRef.current = todaySteps;
+  }, [todaySteps]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      // Al volver a primer plano, recalculamos desde medianoche.
+      if (
+        appStateRef.current.match(/inactive|background/) &&
+        nextState === 'active'
+      ) {
+        getStepsSinceMidnight();
+        loadWeeklySteps();
+      }
+
+      // Al ir a background, guardamos el último valor como fallback.
+      if (nextState === 'background') {
+        saveTodaySteps(todayStepsRef.current);
+      }
+
+      appStateRef.current = nextState;
+    });
+
+    return () => sub.remove();
   }, []);
 
   const ensureActivityRecognitionPermission = async (): Promise<boolean> => {
@@ -108,8 +144,9 @@ export default function StepsScreen() {
       setIsPedometerAvailable(isAvailable ? 'available' : 'unavailable');
       
       if (isAvailable) {
+        // Primero calculamos el total del día, luego iniciamos la suscripción.
+        await getStepsSinceMidnight();
         startPedometer();
-        getStepsSinceMidnight();
       }
     } catch (error) {
       console.error('Error checking pedometer:', error);
@@ -122,11 +159,20 @@ export default function StepsScreen() {
     const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
     try {
+      const todayKey = getLocalDateKey(now);
+      const saved = await AsyncStorage.getItem(`steps_${todayKey}`);
+      const savedSteps = saved ? parseInt(saved, 10) : 0;
+
       const result = await Pedometer.getStepCountAsync(midnight, now);
       if (result) {
-        baselineTodayStepsRef.current = result.steps;
-        setTodaySteps(result.steps);
-        saveTodaySteps(result.steps);
+        // En algunos dispositivos/roms el histórico puede fallar puntualmente.
+        // Nunca bajamos el contador por debajo de lo ya guardado.
+        const sensorSteps = result.steps ?? 0;
+        const merged = Math.max(sensorSteps, savedSteps);
+
+        baselineTodayStepsRef.current = merged;
+        setTodaySteps(merged);
+        saveTodaySteps(merged);
       }
     } catch (error) {
       console.error('Error getting steps since midnight:', error);
@@ -151,8 +197,14 @@ export default function StepsScreen() {
 
   const saveTodaySteps = async (steps: number) => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      await AsyncStorage.setItem(`steps_${today}`, steps.toString());
+      const todayKey = getLocalDateKey(new Date());
+      await AsyncStorage.setItem(`steps_${todayKey}`, steps.toString());
+
+      // Mantener gráfico semanal en sync sin recargar todo
+      setWeeklySteps((prev) => {
+        if (!prev?.length) return prev;
+        return prev.map((d) => (d.date === todayKey ? { ...d, steps } : d));
+      });
     } catch (error) {
       console.error('Error saving steps:', error);
     }
@@ -160,8 +212,8 @@ export default function StepsScreen() {
 
   const loadTodaySteps = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const saved = await AsyncStorage.getItem(`steps_${today}`);
+      const todayKey = getLocalDateKey(new Date());
+      const saved = await AsyncStorage.getItem(`steps_${todayKey}`);
       if (saved) {
         setTodaySteps(parseInt(saved, 10));
       }
@@ -178,7 +230,7 @@ export default function StepsScreen() {
       for (let i = 6; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = getLocalDateKey(date);
         const saved = await AsyncStorage.getItem(`steps_${dateStr}`);
         days.push({
           date: dateStr,
