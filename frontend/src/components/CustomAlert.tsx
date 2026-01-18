@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
 } from 'react-native';
-import { palette, spacing, radius } from '../theme';
+import { palette, spacing, radius, withOpacity } from '../theme';
 import { AppIcon } from './AppIcon';
 
 type AlertType = 'success' | 'error' | 'warning' | 'info' | 'confirm';
@@ -30,18 +30,18 @@ interface CustomAlertProps {
 const alertConfig = {
   success: {
     icon: 'checkmark-circle' as const,
-    color: '#22C55E',
-    bgColor: 'rgba(34, 197, 94, 0.15)',
+    color: palette.success,
+    bgColor: withOpacity(palette.success, 0.15),
   },
   error: {
     icon: 'close-circle' as const,
-    color: '#EF4444',
-    bgColor: 'rgba(239, 68, 68, 0.15)',
+    color: palette.danger,
+    bgColor: withOpacity(palette.danger, 0.15),
   },
   warning: {
     icon: 'warning' as const,
-    color: '#F59E0B',
-    bgColor: 'rgba(245, 158, 11, 0.15)',
+    color: palette.warning,
+    bgColor: withOpacity(palette.warning, 0.15),
   },
   info: {
     icon: 'information-circle' as const,

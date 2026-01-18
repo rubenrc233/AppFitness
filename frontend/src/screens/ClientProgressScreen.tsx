@@ -20,7 +20,7 @@ import AppHeader from '../components/AppHeader';
 import { LineChart } from 'react-native-chart-kit';
 import { progressService } from '../services/api';
 import { ProgressStatus, ProgressUpdate } from '../types';
-import { palette, spacing, radius, typography } from '../theme';
+import { palette, spacing, radius, typography, withOpacity } from '../theme';
 import CustomAlert, { useCustomAlert } from '../components/CustomAlert';
 
 const screenWidth = Dimensions.get('window').width;
@@ -310,7 +310,7 @@ export default function ClientProgressScreen({ clientId }: Props) {
                   backgroundGradientFrom: palette.surface,
                   backgroundGradientTo: palette.surface,
                   decimalPlaces: 1,
-                  color: (opacity = 1) => `rgba(232, 93, 4, ${opacity})`,
+                  color: (opacity = 1) => withOpacity(palette.primary, opacity),
                   labelColor: () => palette.muted,
                   propsForDots: {
                     r: '4',

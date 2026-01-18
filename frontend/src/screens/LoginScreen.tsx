@@ -41,9 +41,9 @@ export default function LoginScreen({ navigation }: any) {
         <View style={styles.content}>
           <View style={styles.logoContainer}>
             <View style={styles.logoCircle}>
-              <Ionicons name="flame" size={48} color={palette.primary} />
+              <Ionicons name="fitness" size={48} color={palette.primary} />
             </View>
-            <Text style={styles.title}>INCINERADOR</Text>
+            <Text style={styles.title}>HYERTROFFICE</Text>
             <Text style={styles.tagline}>Transforma tu cuerpo</Text>
           </View>
 

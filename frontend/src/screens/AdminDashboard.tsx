@@ -165,7 +165,7 @@ export default function AdminDashboard({ navigation }: any) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Incinerador</Text>
+          <Text style={styles.headerTitle}>HYERTROFFICE</Text>
           <Text style={styles.headerSubtitle}>Hola, {user?.name}</Text>
         </View>
         <View style={styles.headerButtons}>

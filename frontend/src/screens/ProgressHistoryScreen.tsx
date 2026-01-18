@@ -15,7 +15,7 @@ import { LineChart } from 'react-native-chart-kit';
 import { progressService } from '../services/api';
 import { ProgressUpdate, ProgressSettings } from '../types';
 import { Picker } from '@react-native-picker/picker';
-import { palette, spacing, radius, typography } from '../theme';
+import { palette, spacing, radius, typography, withOpacity } from '../theme';
 import CustomAlert, { useCustomAlert } from '../components/CustomAlert';
 
 interface Props {
@@ -173,7 +173,7 @@ export default function ProgressHistoryScreen({ route, navigation }: Props) {
                 backgroundGradientFromOpacity: 0,
                 backgroundGradientToOpacity: 0,
                 decimalPlaces: 1,
-                color: (opacity = 1) => `rgba(232, 93, 4, ${opacity})`,
+                color: (opacity = 1) => withOpacity(palette.primary, opacity),
                 labelColor: () => palette.muted,
                 style: { borderRadius: radius.md },
                 propsForDots: {

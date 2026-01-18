@@ -14,7 +14,7 @@ import { Diet, MealOption, OptionFood, Supplement } from '../types';
 import { AppIcon as Ionicons } from '../components/AppIcon';
 import LoadingScreen from '../components/LoadingScreen';
 import AppHeader from '../components/AppHeader';
-import { palette, spacing, radius, typography } from '../theme';
+import { palette, spacing, radius, typography, withOpacity } from '../theme';
 import CustomAlert, { useCustomAlert } from '../components/CustomAlert';
 
 interface Props {
@@ -261,18 +261,18 @@ export default function ClientDietScreen({ clientId, navigation }: Props) {
                     <View style={styles.nutritionContainer}>
                       {/* Macros principales */}
                       <View style={styles.macrosRow}>
-                        <View style={[styles.macroCard, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
-                          <Text style={[styles.macroValueNew, { color: '#EF4444' }]}>{Math.round(calculateMacros().protein)}g</Text>
+                        <View style={[styles.macroCard, { backgroundColor: withOpacity(palette.danger, 0.12) }]}>
+                          <Text style={[styles.macroValueNew, { color: palette.danger }]}>{Math.round(calculateMacros().protein)}g</Text>
                           <Text style={styles.macroLabelNew}>Proteína</Text>
                         </View>
 
-                        <View style={[styles.macroCard, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-                          <Text style={[styles.macroValueNew, { color: '#3B82F6' }]}>{Math.round(calculateMacros().carbs)}g</Text>
+                        <View style={[styles.macroCard, { backgroundColor: withOpacity(palette.accent, 0.12) }]}>
+                          <Text style={[styles.macroValueNew, { color: palette.accent }]}>{Math.round(calculateMacros().carbs)}g</Text>
                           <Text style={styles.macroLabelNew}>Hidratos</Text>
                         </View>
 
-                        <View style={[styles.macroCard, { backgroundColor: 'rgba(234, 179, 8, 0.1)' }]}>
-                          <Text style={[styles.macroValueNew, { color: '#EAB308' }]}>{Math.round(calculateMacros().fat)}g</Text>
+                        <View style={[styles.macroCard, { backgroundColor: withOpacity(palette.warning, 0.12) }]}>
+                          <Text style={[styles.macroValueNew, { color: palette.warning }]}>{Math.round(calculateMacros().fat)}g</Text>
                           <Text style={styles.macroLabelNew}>Grasas</Text>
                         </View>
                       </View>
@@ -294,7 +294,7 @@ export default function ClientDietScreen({ clientId, navigation }: Props) {
 
                       {/* Calorías totales */}
                       <View style={styles.caloriesCard}>
-                        <Ionicons name="flame" size={24} color="#FF6B35" />
+                        <Ionicons name="flame" size={24} color={palette.primary} />
                         <Text style={styles.caloriesValueBig}>{Math.round(calculateTotalCalories())}</Text>
                         <Text style={styles.caloriesLabelBig}>kcal</Text>
                       </View>
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    backgroundColor: withOpacity(palette.primary, 0.12),
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.md,
@@ -518,12 +518,12 @@ const styles = StyleSheet.create({
   caloriesValueBig: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#FF6B35',
+    color: palette.primary,
   },
   caloriesLabelBig: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FF6B35',
+    color: palette.primary,
     opacity: 0.8,
   },
   macrosRow: {

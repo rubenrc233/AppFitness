@@ -1,5 +1,6 @@
 import React from 'react';
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
+import { palette } from '../theme';
 import {
   Apple,
   AlertTriangle,
@@ -142,7 +143,7 @@ const ICONS: Record<string, LucideIconComponent> = {
 };
 
 // NOTE: lucide icons are SVG (no font), so they work reliably in APK builds.
-export function AppIcon({ name, size = 24, color = '#000', strokeWidth = 2, style }: AppIconProps) {
+export function AppIcon({ name, size = 24, color = palette.text, strokeWidth = 2, style }: AppIconProps) {
   const normalized = name.replace(/-outline$/, '');
 
   const Icon = ICONS[name] ?? ICONS[normalized] ?? HelpCircle;

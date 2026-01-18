@@ -129,7 +129,7 @@ export default function ClientExerciseScreen({ clientId, navigation }: Props) {
                 >
                   {isActive ? (
                     <LinearGradient
-                      colors={[palette.primary, '#FF8A3D']}
+                      colors={[palette.primary, palette.primaryLight]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={styles.dayButton}
@@ -179,7 +179,7 @@ export default function ClientExerciseScreen({ clientId, navigation }: Props) {
                       )}
                       <View style={styles.playOverlay}>
                         <View style={styles.playButton}>
-                          <Ionicons name="play" size={24} color="#FFF" />
+                          <Ionicons name="play" size={24} color={palette.text} />
                         </View>
                       </View>
                       <View style={styles.exerciseNumberBadge}>

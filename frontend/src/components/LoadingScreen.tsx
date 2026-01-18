@@ -64,10 +64,10 @@ export default function LoadingScreen({ message }: LoadingScreenProps) {
             { transform: [{ scale: pulseAnim }] }
           ]}
         >
-          <AppIcon name="flame" size={64} color={palette.primary} />
+          <AppIcon name="fitness" size={64} color={palette.primary} />
         </Animated.View>
         
-        <Text style={styles.title}>EL INCINERADOR</Text>
+        <Text style={styles.title}>HYERTROFFICE</Text>
         
         <View style={styles.dotsContainer}>
           <LoadingDot delay={0} />

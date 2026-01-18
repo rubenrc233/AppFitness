@@ -17,7 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppHeader from '../components/AppHeader';
 import { stepsService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { palette, spacing, radius } from '../theme';
+import { palette, spacing, radius, withOpacity } from '../theme';
 
 const { width } = Dimensions.get('window');
 const DEFAULT_DAILY_GOAL = 10000; // Meta por defecto
@@ -299,7 +299,7 @@ export default function StepsScreen() {
 
         {isPedometerAvailable === 'unavailable' && (
           <View style={[styles.statusCard, styles.statusWarning]}>
-            <Ionicons name="warning-outline" size={24} color="#F59E0B" />
+            <Ionicons name="warning-outline" size={24} color={palette.warning} />
             <Text style={styles.statusTextWarning}>
               El podómetro no está disponible en este dispositivo
             </Text>
@@ -308,7 +308,7 @@ export default function StepsScreen() {
 
         {isPedometerAvailable === 'permissionDenied' && (
           <View style={[styles.statusCard, styles.statusWarning, styles.permissionCard]}>
-            <Ionicons name="lock-closed-outline" size={24} color="#F59E0B" />
+            <Ionicons name="lock-closed-outline" size={24} color={palette.warning} />
             <View style={styles.permissionTextContainer}>
               <Text style={styles.statusTextWarning}>
                 Permiso de actividad física denegado
@@ -339,7 +339,7 @@ export default function StepsScreen() {
               </View>
               {/* Barra de progreso circular usando View */}
               <View style={[styles.progressRing, { 
-                borderColor: `rgba(255, 107, 53, ${Math.min(progress / 100, 1)})`,
+                borderColor: withOpacity(palette.primary, Math.min(progress / 100, 1)),
                 borderWidth: progress > 0 ? 8 : 0,
               }]} />
             </View>
@@ -351,19 +351,19 @@ export default function StepsScreen() {
           {/* Estadísticas rápidas */}
           <View style={styles.quickStats}>
             <View style={styles.quickStatItem}>
-              <Ionicons name="flame" size={20} color="#EF4444" />
+              <Ionicons name="flame" size={20} color={palette.danger} />
               <Text style={styles.quickStatValue}>{estimatedCalories}</Text>
               <Text style={styles.quickStatLabel}>kcal</Text>
             </View>
             <View style={styles.quickStatDivider} />
             <View style={styles.quickStatItem}>
-              <Ionicons name="navigate" size={20} color="#3B82F6" />
+              <Ionicons name="navigate" size={20} color={palette.accent} />
               <Text style={styles.quickStatValue}>{estimatedKm}</Text>
               <Text style={styles.quickStatLabel}>km</Text>
             </View>
             <View style={styles.quickStatDivider} />
             <View style={styles.quickStatItem}>
-              <Ionicons name="time" size={20} color="#22C55E" />
+              <Ionicons name="time" size={20} color={palette.success} />
               <Text style={styles.quickStatValue}>{Math.round(todaySteps / 100)}</Text>
               <Text style={styles.quickStatLabel}>min activo</Text>
             </View>
@@ -403,7 +403,7 @@ export default function StepsScreen() {
                         styles.chartBar,
                         { 
                           height: `${barHeight}%`,
-                          backgroundColor: isToday ? palette.primary : 'rgba(255, 107, 53, 0.4)',
+                          backgroundColor: isToday ? palette.primary : withOpacity(palette.primary, 0.4),
                         }
                       ]} 
                     />
@@ -442,14 +442,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   statusWarning: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    backgroundColor: withOpacity(palette.warning, 0.12),
   },
   statusText: {
     color: palette.muted,
     fontSize: 14,
   },
   statusTextWarning: {
-    color: '#F59E0B',
+    color: palette.warning,
     fontSize: 14,
     flex: 1,
   },
@@ -460,20 +460,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   permissionHint: {
-    color: '#B45309',
+    color: palette.warning,
     fontSize: 12,
     marginTop: 2,
+    opacity: 0.85,
   },
   permissionButton: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.5)',
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: withOpacity(palette.warning, 0.5),
+    backgroundColor: withOpacity(palette.warning, 0.12),
   },
   permissionButtonText: {
-    color: '#B45309',
+    color: palette.warning,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -624,7 +625,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   motivationCard: {
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    backgroundColor: withOpacity(palette.primary, 0.1),
     borderRadius: radius.lg,
     padding: spacing.lg,
     marginTop: spacing.md,
