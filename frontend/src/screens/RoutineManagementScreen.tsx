@@ -69,8 +69,16 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
   const [selectedDayWeekday, setSelectedDayWeekday] = useState<number>(0);
   const [dayExercises, setDayExercises] = useState<DayExercise[]>([]);
   const [dayNotes, setDayNotes] = useState('');
+  const [dayTitle, setDayTitle] = useState('');
   const [dayModalDirty, setDayModalDirty] = useState(false);
   const [dayModalSaving, setDayModalSaving] = useState(false);
+
+  // Edit exercise modal states
+  const [editingExercise, setEditingExercise] = useState<DayExercise | null>(null);
+  const [editExerciseModalVisible, setEditExerciseModalVisible] = useState(false);
+  const [editExerciseSets, setEditExerciseSets] = useState('3');
+  const [editExerciseReps, setEditExerciseReps] = useState('12');
+  const [editExerciseNotes, setEditExerciseNotes] = useState('');
 
   // Add exercise states
   const [selectedExercise, setSelectedExercise] = useState<ExerciseLibrary | null>(null);
@@ -317,6 +325,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
     setSelectedDay(day);
     setSelectedDayWeekday(day.weekday ?? 0);
     setDayNotes(day.notes || '');
+    setDayTitle(day.custom_name || day.name || '');
     setDayModalDirty(false);
     loadDayExercises(day.id);
     loadMuscleGroups();
@@ -328,22 +337,25 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
     setViewDayModalVisible(true);
   };
 
-  const handleUpdateDay = async (overrides?: { weekday?: number; notes?: string }) => {
+  const handleUpdateDay = async (overrides?: { weekday?: number; notes?: string; title?: string }) => {
     if (!selectedDay) return false;
 
     const nextWeekday = overrides?.weekday ?? selectedDayWeekday;
     const nextNotes = overrides?.notes ?? dayNotes;
+    const nextTitle = overrides?.title ?? dayTitle;
     const currentWeekday = selectedDay.weekday ?? 0;
     const currentNotes = selectedDay.notes || '';
+    const currentTitle = selectedDay.custom_name || selectedDay.name || '';
 
     // Evitar llamadas innecesarias
-    if (nextWeekday === currentWeekday && nextNotes === currentNotes) {
+    if (nextWeekday === currentWeekday && nextNotes === currentNotes && nextTitle === currentTitle) {
       return true;
     }
 
     try {
       await routineService.updateDay(selectedDay.id, {
         name: selectedDay.name,
+        custom_name: nextTitle,
         notes: nextNotes,
         weekday: nextWeekday,
       });
@@ -452,6 +464,68 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
     } catch (error) {
       console.error('Error deleting exercise:', error);
       showError('Error', 'No se pudo eliminar el ejercicio');
+    }
+  };
+
+  const openEditExerciseModal = (exercise: DayExercise) => {
+    setEditingExercise(exercise);
+    setEditExerciseSets(String(exercise.sets));
+    setEditExerciseReps(String(exercise.reps));
+    setEditExerciseNotes(exercise.notes || '');
+    setEditExerciseModalVisible(true);
+  };
+
+  const handleUpdateExercise = async () => {
+    if (!editingExercise) return;
+
+    try {
+      await routineService.updateDayExercise(editingExercise.id, {
+        sets: parseInt(editExerciseSets) || 3,
+        reps: editExerciseReps,
+        notes: editExerciseNotes,
+      });
+
+      setEditExerciseModalVisible(false);
+      setEditingExercise(null);
+      setNeedsSave(true);
+      setDayModalDirty(true);
+      if (selectedDay) {
+        loadDayExercises(selectedDay.id);
+      }
+      showSuccess('Éxito', 'Ejercicio actualizado');
+    } catch (error) {
+      console.error('Error updating exercise:', error);
+      showError('Error', 'No se pudo actualizar el ejercicio');
+    }
+  };
+
+  const handleMoveExercise = async (index: number, direction: 'up' | 'down') => {
+    if (!selectedDay) return;
+    
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= dayExercises.length) return;
+
+    // Crear nueva lista con el orden cambiado
+    const newExercises = [...dayExercises];
+    const [movedExercise] = newExercises.splice(index, 1);
+    newExercises.splice(newIndex, 0, movedExercise);
+
+    // Actualizar el estado local inmediatamente para feedback visual rápido
+    setDayExercises(newExercises);
+    setDayModalDirty(true);
+    setNeedsSave(true);
+
+    try {
+      // Actualizar el order_index de todos los ejercicios afectados
+      await routineService.reorderDayExercises(
+        selectedDay.id,
+        newExercises.map((ex) => ex.id)
+      );
+    } catch (error) {
+      console.error('Error reordering exercises:', error);
+      showError('Error', 'No se pudo cambiar el orden');
+      // Revertir si falla
+      loadDayExercises(selectedDay.id);
     }
   };
 
@@ -1127,9 +1201,17 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
             <View style={styles.wizardStepContainer}>
               {/* Day Info */}
               <View style={styles.dayEditHeader}>
-                <Text style={styles.dayEditTitle}>
-                  {selectedDay?.custom_name || selectedDay?.name}
-                </Text>
+                <Text style={styles.wizardInputLabel}>TÍTULO DEL DÍA</Text>
+                <TextInput
+                  style={styles.dayTitleInput}
+                  placeholder="Ej: Pecho y Tríceps"
+                  placeholderTextColor={palette.mutedAlt}
+                  value={dayTitle}
+                  onChangeText={(text) => {
+                    setDayTitle(text);
+                    setDayModalDirty(true);
+                  }}
+                />
                 <Text style={styles.dayEditSubtitle}>
                   Configura los ejercicios y notas de este día
                 </Text>
@@ -1204,12 +1286,44 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                             <Text style={styles.wizardExerciseNotes}>{ex.notes}</Text>
                           )}
                         </View>
-                        <TouchableOpacity
-                          onPress={() => handleDeleteExercise(ex.id)}
-                          style={styles.wizardExerciseDelete}
-                        >
-                          <Ionicons name="trash-outline" size={18} color={palette.danger} />
-                        </TouchableOpacity>
+                        <View style={styles.exerciseActions}>
+                          <TouchableOpacity
+                            onPress={() => handleMoveExercise(index, 'up')}
+                            style={[
+                              styles.reorderButton,
+                              index === 0 && styles.reorderButtonDisabled,
+                            ]}
+                            disabled={index === 0}
+                          >
+                            <Ionicons
+                              name="chevron-up"
+                              size={18}
+                              color={index === 0 ? palette.mutedAlt : palette.text}
+                            />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleMoveExercise(index, 'down')}
+                            style={[
+                              styles.reorderButton,
+                              index === dayExercises.length - 1 && styles.reorderButtonDisabled,
+                            ]}
+                            disabled={index === dayExercises.length - 1}
+                          >
+                            <Ionicons
+                              name="chevron-down"
+                              size={18}
+                              color={
+                                index === dayExercises.length - 1 ? palette.mutedAlt : palette.text
+                              }
+                            />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleDeleteExercise(ex.id)}
+                            style={styles.wizardExerciseDelete}
+                          >
+                            <Ionicons name="trash-outline" size={18} color={palette.danger} />
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     ))}
                   </View>
@@ -1415,6 +1529,67 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                 disabled={!customExerciseName.trim() || !customExerciseMuscleGroup}
               >
                 <Text style={styles.primaryButtonText}>Crear</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal: Editar Ejercicio */}
+      <Modal visible={editExerciseModalVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            
+            {editingExercise && (
+              <>
+                <Text style={styles.exerciseNameLabel}>{editingExercise.exercise_name}</Text>
+                
+                <Text style={styles.label}>Series:</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ej: 3"
+                  placeholderTextColor={palette.mutedAlt}
+                  keyboardType="numeric"
+                  value={editExerciseSets}
+                  onChangeText={setEditExerciseSets}
+                />
+
+                <Text style={styles.label}>Repeticiones:</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ej: 12 o 8-12"
+                  placeholderTextColor={palette.mutedAlt}
+                  value={editExerciseReps}
+                  onChangeText={setEditExerciseReps}
+                />
+
+                <Text style={styles.label}>Notas (opcional):</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Observaciones del ejercicio..."
+                  placeholderTextColor={palette.mutedAlt}
+                  value={editExerciseNotes}
+                  onChangeText={setEditExerciseNotes}
+                  multiline
+                />
+              </>
+            )}
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                  setEditExerciseModalVisible(false);
+                  setEditingExercise(null);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={handleUpdateExercise}
+              >
+                <Text style={styles.primaryButtonText}>Guardar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1852,6 +2027,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: palette.text,
     marginBottom: 6,
+  },
+  dayTitleInput: {
+    backgroundColor: palette.inputBg,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    color: palette.text,
+    borderWidth: 1,
+    borderColor: palette.border,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: spacing.sm,
+  },
+  exerciseNameLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: palette.text,
+    marginBottom: spacing.md,
+    textAlign: 'center',
   },
   dayEditSubtitle: {
     fontSize: 13,
@@ -2560,6 +2753,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
     fontStyle: 'italic',
+  },
+  exerciseActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  reorderButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: palette.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reorderButtonDisabled: {
+    opacity: 0.3,
   },
   wizardExerciseDelete: {
     width: 32,

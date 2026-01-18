@@ -197,6 +197,12 @@ export const routineService = {
     return response.data;
   },
 
+  // Reordenar ejercicios de un día
+  reorderDayExercises: async (dayId: number, exerciseIds: number[]) => {
+    const response = await api.put(`/routines/days/${dayId}/exercises/reorder`, { exerciseIds });
+    return response.data;
+  },
+
   // Eliminar rutina completa
   deleteRoutine: async (routineId: number) => {
     const response = await api.delete(`/routines/${routineId}`);

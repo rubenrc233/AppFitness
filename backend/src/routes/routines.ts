@@ -246,6 +246,38 @@ router.delete('/days/exercises/:exerciseId', authenticateToken, async (req, res)
   }
 });
 
+// Reordenar ejercicios de un día
+router.put('/days/:dayId/exercises/reorder', authenticateToken, async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { dayId } = req.params;
+    const { exerciseIds } = req.body;
+
+    if (!Array.isArray(exerciseIds) || exerciseIds.length === 0) {
+      return res.status(400).json({ error: 'exerciseIds debe ser un array no vacío' });
+    }
+
+    await connection.beginTransaction();
+
+    // Actualizar el order_index de cada ejercicio según su nueva posición
+    for (let i = 0; i < exerciseIds.length; i++) {
+      await connection.query(
+        'UPDATE day_exercises SET order_index = ? WHERE id = ? AND day_id = ?',
+        [i, exerciseIds[i], dayId]
+      );
+    }
+
+    await connection.commit();
+    res.json({ message: 'Ejercicios reordenados correctamente' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error reordering exercises:', error);
+    res.status(500).json({ error: 'Error al reordenar ejercicios' });
+  } finally {
+    connection.release();
+  }
+});
+
 // Eliminar rutina completa
 router.delete('/:routineId', authenticateToken, async (req, res) => {
   try {
