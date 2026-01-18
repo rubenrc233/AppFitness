@@ -1202,7 +1202,11 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.wizardContentFlex}>
+          <ScrollView 
+            style={styles.wizardContentFlex}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+          >
             <View style={styles.wizardStepContainer}>
               {/* Day Info */}
               <View style={styles.dayEditHeader}>
@@ -1404,7 +1408,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                 </ScrollView>
               </View>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
 
