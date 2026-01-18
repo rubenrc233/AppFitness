@@ -165,12 +165,22 @@ export default function StepsScreen() {
   const getStepsSinceMidnight = async () => {
     const now = new Date();
     const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    try {
-      const todayKey = getLocalDateKey(now);
-      const saved = await AsyncStorage.getItem(`steps_${todayKey}`);
-      const savedSteps = saved ? parseInt(saved, 10) : 0;
 
+    const todayKey = getLocalDateKey(now);
+    const saved = await AsyncStorage.getItem(`steps_${todayKey}`);
+    const parsedSaved = saved ? parseInt(saved, 10) : 0;
+    const savedSteps = Number.isFinite(parsedSaved) ? parsedSaved : 0;
+
+    // Expo Pedometer historical range is not supported on Android (as of today).
+    // We fall back to the locally persisted counter and keep counting via watchStepCount.
+    if (Platform.OS === 'android') {
+      const merged = Math.max(savedSteps, baselineTodayStepsRef.current);
+      baselineTodayStepsRef.current = merged;
+      setTodaySteps(merged);
+      return;
+    }
+
+    try {
       const result = await Pedometer.getStepCountAsync(midnight, now);
       if (result) {
         // En algunos dispositivos/roms el histórico puede fallar puntualmente.
@@ -183,7 +193,10 @@ export default function StepsScreen() {
         saveTodaySteps(merged);
       }
     } catch (error) {
-      console.error('Error getting steps since midnight:', error);
+      // Fallback silencioso: evitamos LogBox rojo si falla el histórico.
+      const merged = Math.max(savedSteps, baselineTodayStepsRef.current);
+      baselineTodayStepsRef.current = merged;
+      setTodaySteps(merged);
     }
   };
 

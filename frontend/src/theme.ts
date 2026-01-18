@@ -1,16 +1,16 @@
-// Shared design tokens - Dark navy + cyan/turquoise aesthetic
+// Shared design tokens - Soft off-white light aesthetic (not pure white)
 export const palette = {
-  // Fondos oscuros (navy)
-  background: '#050B12',
-  surface: '#0A1421',
-  surfaceAlt: '#0E1D2C',
-  surfaceHighlight: '#11263A',
-  inputBg: '#0C1826',
-  headerBg: '#061018',
+  // Fondos claros (blanco roto)
+  background: '#F5F6F8',
+  surface: '#FFFFFF',
+  surfaceAlt: '#EEF2F6',
+  surfaceHighlight: '#E7EDF3',
+  inputBg: '#FFFFFF',
+  headerBg: '#FFFFFF',
 
   // Bordes
-  border: '#1E3448',
-  borderLight: '#27435C',
+  border: '#E2E8F0',
+  borderLight: '#CBD5E1',
 
   // Marca
   primary: '#16D3D6',
@@ -21,10 +21,10 @@ export const palette = {
   accentMuted: '#2BD4FF40',
 
   // Texto
-  text: '#F5FBFF',
-  textWarm: '#C6F7FF',
-  muted: '#89A4B5',
-  mutedAlt: '#5D7688',
+  text: '#0B1220',
+  textWarm: '#0F2233',
+  muted: '#5B6B7A',
+  mutedAlt: '#7A8A99',
 
   // Estados
   success: '#22C55E',

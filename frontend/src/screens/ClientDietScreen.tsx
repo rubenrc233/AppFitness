@@ -298,6 +298,40 @@ export default function ClientDietScreen({ clientId, navigation }: Props) {
                         <Text style={styles.caloriesValueBig}>{Math.round(calculateTotalCalories())}</Text>
                         <Text style={styles.caloriesLabelBig}>kcal</Text>
                       </View>
+
+                      {/* Suplementación (dentro de la tarjeta) */}
+                      {supplements.length > 0 && (
+                        <View style={styles.supplementsInlineSection}>
+                          <View style={styles.supplementsInlineDivider} />
+                          <Text style={styles.supplementsInlineTitle}>Suplementación</Text>
+
+                          <View style={styles.supplementsInlineGrid}>
+                            {supplements.map((supplement) => (
+                              <View key={supplement.id} style={styles.supplementInlineCard}>
+                                <Text style={styles.supplementInlineName} numberOfLines={1}>
+                                  {supplement.name}
+                                </Text>
+
+                                <Text style={styles.supplementInlineDose}>
+                                  {formatSupplementDosage(supplement.dosage)}
+                                </Text>
+
+                                {!!supplement.time_of_day && (
+                                  <Text style={styles.supplementInlineTime}>
+                                    {supplement.time_of_day}
+                                  </Text>
+                                )}
+
+                                {!!supplement.notes && (
+                                  <Text style={styles.supplementInlineNotes} numberOfLines={2}>
+                                    {supplement.notes}
+                                  </Text>
+                                )}
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      )}
                     </View>
                   </View>
                 )}
@@ -307,31 +341,6 @@ export default function ClientDietScreen({ clientId, navigation }: Props) {
                 <Ionicons name="restaurant-outline" size={48} color={palette.muted} />
                 <Text style={styles.noOptionsText}>Sin opciones disponibles</Text>
                 <Text style={styles.noOptionsSubtext}>Esta comida aún no tiene opciones asignadas</Text>
-              </View>
-            )}
-            
-            {/* Sección de Suplementación */}
-            {supplements.length > 0 && (
-              <View style={styles.supplementsSection}>
-                <Text style={styles.supplementsTitle}>Suplementación</Text>
-                {supplements.map((supplement) => (
-                  <View key={supplement.id} style={styles.supplementCard}>
-                    <Text style={styles.supplementName}>{supplement.name}</Text>
-                    <Text style={styles.supplementDetail}>
-                      <Text style={styles.supplementDetailLabel}>Dosis:</Text>{' '}
-                      {formatSupplementDosage(supplement.dosage)}
-                    </Text>
-                    {supplement.time_of_day && (
-                      <Text style={styles.supplementDetail}>
-                        <Text style={styles.supplementDetailLabel}>Momento:</Text>{' '}
-                        {supplement.time_of_day}
-                      </Text>
-                    )}
-                    {supplement.notes && (
-                      <Text style={styles.supplementNotes}>{supplement.notes}</Text>
-                    )}
-                  </View>
-                ))}
               </View>
             )}
             
@@ -504,6 +513,59 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: palette.border,
   },
+  supplementsInlineSection: {
+    marginTop: spacing.md,
+  },
+  supplementsInlineDivider: {
+    height: 1,
+    backgroundColor: palette.border,
+    marginTop: spacing.md,
+    marginBottom: spacing.md,
+  },
+  supplementsInlineTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: palette.text,
+    marginBottom: spacing.sm,
+  },
+  supplementsInlineGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  supplementInlineCard: {
+    flexBasis: '48%',
+    backgroundColor: withOpacity(palette.accent, 0.1),
+    borderRadius: radius.md,
+    padding: spacing.md,
+    alignItems: 'center',
+  },
+  supplementInlineName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: palette.text,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  supplementInlineDose: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: palette.accent,
+    textAlign: 'center',
+  },
+  supplementInlineTime: {
+    fontSize: 11,
+    color: palette.muted,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  supplementInlineNotes: {
+    fontSize: 11,
+    color: palette.muted,
+    marginTop: spacing.xs,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
   caloriesCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -614,44 +676,5 @@ const styles = StyleSheet.create({
     color: palette.muted,
     marginTop: spacing.xs,
     textAlign: 'center',
-  },
-  supplementsSection: {
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.lg,
-  },
-  supplementsTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: palette.text,
-    marginBottom: spacing.md,
-  },
-  supplementCard: {
-    backgroundColor: palette.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  supplementName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: palette.text,
-    flex: 1,
-  },
-  supplementDetail: {
-    fontSize: 13,
-    color: palette.muted,
-    marginTop: spacing.xs,
-  },
-  supplementDetailLabel: {
-    fontWeight: '700',
-    color: palette.textWarm,
-  },
-  supplementNotes: {
-    fontSize: 13,
-    color: palette.textWarm,
-    marginTop: spacing.xs,
-    fontStyle: 'italic',
   },
 });
