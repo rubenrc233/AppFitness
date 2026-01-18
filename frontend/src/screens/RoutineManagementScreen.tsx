@@ -9,11 +9,9 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
-import DraggableFlatList, {
-  ScaleDecorator,
-  RenderItemParams,
-} from 'react-native-draggable-flatlist';
+
 import { AppIcon as Ionicons } from '../components/AppIcon';
+import LoadingScreen from '../components/LoadingScreen';
 import { palette, spacing, radius, typography } from '../theme';
 import { routineService } from '../services/api';
 import { Routine, RoutineDay, ExerciseLibrary, DayExercise } from '../types';
@@ -38,6 +36,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>('');
   const [dayExercisesMap, setDayExercisesMap] = useState<{ [key: number]: DayExercise[] }>({});
   const [needsSave, setNeedsSave] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Custom alert hook
   const { alertState, hideAlert, showSuccess, showError, showConfirm, showWarning } = useCustomAlert();
@@ -101,25 +100,31 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
   }, []);
 
   const loadRoutine = async () => {
+    setLoading(true);
     try {
       const data = await routineService.getRoutine(clientId);
       setRoutine(data);
 
       if (data && data.days) {
         const exercisesMap: { [key: number]: DayExercise[] } = {};
-        for (const day of data.days) {
-          try {
-            const exercises = await routineService.getDayExercises(day.id);
-            exercisesMap[day.id] = exercises;
-          } catch (error) {
-            console.error(`Error loading exercises for day ${day.id}:`, error);
-            exercisesMap[day.id] = [];
-          }
-        }
+        // Cargar todos los ejercicios en paralelo
+        await Promise.all(
+          data.days.map(async (day: RoutineDay) => {
+            try {
+              const exercises = await routineService.getDayExercises(day.id);
+              exercisesMap[day.id] = exercises;
+            } catch (error) {
+              console.error(`Error loading exercises for day ${day.id}:`, error);
+              exercisesMap[day.id] = [];
+            }
+          })
+        );
         setDayExercisesMap(exercisesMap);
       }
     } catch (error) {
       console.error('Error loading routine:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -500,24 +505,31 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
     }
   };
 
-  const handleDragEnd = async ({ data }: { data: DayExercise[] }) => {
+  const handleMoveExercise = async (exerciseId: number, direction: 'up' | 'down') => {
     if (!selectedDay) return;
 
-    // Actualizar el estado local inmediatamente
-    setDayExercises(data);
+    const currentIndex = dayExercises.findIndex((ex) => ex.id === exerciseId);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= dayExercises.length) return;
+
+    // Crear nueva lista con el orden cambiado
+    const newExercises = [...dayExercises];
+    [newExercises[currentIndex], newExercises[newIndex]] = [newExercises[newIndex], newExercises[currentIndex]];
+
+    setDayExercises(newExercises);
     setDayModalDirty(true);
     setNeedsSave(true);
 
     try {
-      // Actualizar el order_index en el backend
       await routineService.reorderDayExercises(
         selectedDay.id,
-        data.map((ex) => ex.id)
+        newExercises.map((ex) => ex.id)
       );
     } catch (error) {
       console.error('Error reordering exercises:', error);
       showError('Error', 'No se pudo cambiar el orden');
-      // Revertir si falla
       loadDayExercises(selectedDay.id);
     }
   };
@@ -652,7 +664,10 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.content}>
+      {loading ? (
+        <LoadingScreen message="Cargando rutina..." />
+      ) : (
+        <ScrollView style={styles.content}>
         {!routine ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="fitness-outline" size={80} color={palette.primary} />
@@ -739,6 +754,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
           </>
         )}
       </ScrollView>
+      )}
 
       {/* Wizard: Crear Rutina */}
       <Modal visible={wizardVisible} animationType="slide" transparent={false}>
@@ -1186,11 +1202,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView 
-            style={styles.wizardContent} 
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-          >
+          <View style={styles.wizardContentFlex}>
             <View style={styles.wizardStepContainer}>
               {/* Day Info */}
               <View style={styles.dayEditHeader}>
@@ -1266,51 +1278,46 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                     </Text>
                   </View>
                 ) : (
-                  <View style={styles.draggableListContainer}>
-                    <DraggableFlatList
-                      data={dayExercises}
-                      onDragEnd={handleDragEnd}
-                      keyExtractor={(item) => item.id.toString()}
-                      renderItem={({ item, drag, isActive }: RenderItemParams<DayExercise>) => {
-                        const index = dayExercises.findIndex((ex) => ex.id === item.id);
-                        return (
-                          <ScaleDecorator>
-                            <View
-                              style={[
-                                styles.wizardExerciseItem,
-                                isActive && styles.wizardExerciseItemDragging,
-                              ]}
-                            >
-                              <TouchableOpacity
-                                onLongPress={drag}
-                                style={styles.dragHandle}
-                              >
-                                <Ionicons name="reorder-three" size={24} color={palette.muted} />
-                              </TouchableOpacity>
-                              <Text style={styles.wizardExerciseNumber}>{index + 1}</Text>
-                              <TouchableOpacity
-                                style={styles.wizardExerciseInfo}
-                                onPress={() => openEditExerciseModal(item)}
-                              >
-                                <Text style={styles.wizardExerciseName}>{item.exercise_name}</Text>
-                                <Text style={styles.wizardExerciseDetails}>
-                                  {item.sets} × {item.reps}
-                                </Text>
-                                {item.notes && (
-                                  <Text style={styles.wizardExerciseNotes}>{item.notes}</Text>
-                                )}
-                              </TouchableOpacity>
-                              <TouchableOpacity
-                                onPress={() => handleDeleteExercise(item.id)}
-                                style={styles.wizardExerciseDelete}
-                              >
-                                <Ionicons name="trash-outline" size={18} color={palette.danger} />
-                              </TouchableOpacity>
-                            </View>
-                          </ScaleDecorator>
-                        );
-                      }}
-                    />
+                  <View style={styles.exercisesList}>
+                    {dayExercises.map((ex, index) => (
+                      <View key={ex.id} style={styles.wizardExerciseItem}>
+                        <Text style={styles.wizardExerciseNumber}>{index + 1}</Text>
+                        <TouchableOpacity
+                          style={styles.wizardExerciseInfo}
+                          onPress={() => openEditExerciseModal(ex)}
+                        >
+                          <Text style={styles.wizardExerciseName}>{ex.exercise_name}</Text>
+                          <Text style={styles.wizardExerciseDetails}>
+                            {ex.sets} × {ex.reps}
+                          </Text>
+                          {ex.notes && (
+                            <Text style={styles.wizardExerciseNotes}>{ex.notes}</Text>
+                          )}
+                        </TouchableOpacity>
+                        <View style={styles.exerciseActions}>
+                          <TouchableOpacity
+                            onPress={() => handleMoveExercise(ex.id, 'up')}
+                            disabled={index === 0}
+                            style={[styles.moveButton, index === 0 && styles.moveButtonDisabled]}
+                          >
+                            <Ionicons name="chevron-up" size={20} color={index === 0 ? palette.muted : palette.text} />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleMoveExercise(ex.id, 'down')}
+                            disabled={index === dayExercises.length - 1}
+                            style={[styles.moveButton, index === dayExercises.length - 1 && styles.moveButtonDisabled]}
+                          >
+                            <Ionicons name="chevron-down" size={20} color={index === dayExercises.length - 1 ? palette.muted : palette.text} />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleDeleteExercise(ex.id)}
+                            style={styles.wizardExerciseDelete}
+                          >
+                            <Ionicons name="trash-outline" size={18} color={palette.danger} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ))}
                   </View>
                 )}
               </View>
@@ -1397,7 +1404,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                 </ScrollView>
               </View>
             </View>
-          </ScrollView>
+          </View>
         </View>
       </Modal>
 
@@ -2430,6 +2437,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
   },
+  wizardContentFlex: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+  },
   wizardStepContainer: {
     paddingBottom: spacing.xl,
   },
@@ -2663,15 +2674,21 @@ const styles = StyleSheet.create({
   wizardExercisesList: {
     marginBottom: spacing.md,
   },
-  draggableListContainer: {
-    minHeight: 100,
-    maxHeight: 400,
-  },
-  dragHandle: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.sm,
-    justifyContent: 'center',
+  exerciseActions: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.xs,
+  },
+  moveButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: palette.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moveButtonDisabled: {
+    opacity: 0.3,
   },
   wizardExerciseItem: {
     flexDirection: 'row',
@@ -2680,15 +2697,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: palette.border,
     backgroundColor: palette.background,
-  },
-  wizardExerciseItemDragging: {
-    backgroundColor: palette.primaryGlow,
-    borderRadius: radius.md,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
   },
   wizardExerciseNumber: {
     fontSize: 14,

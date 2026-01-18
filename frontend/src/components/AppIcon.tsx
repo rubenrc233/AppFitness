@@ -12,6 +12,8 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Clock,
   Dumbbell,
   FileText,
@@ -63,6 +65,8 @@ const ICONS: Record<string, LucideIconComponent> = {
   'arrow-back': ArrowLeft,
   'arrow-forward': ArrowRight,
   'chevron-forward': ChevronRight,
+  'chevron-up': ChevronUp,
+  'chevron-down': ChevronDown,
   close: X,
   'close-circle': XCircle,
 

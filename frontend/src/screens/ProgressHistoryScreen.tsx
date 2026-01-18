@@ -513,12 +513,12 @@ const styles = StyleSheet.create({
   },
   weightDiffUp: {
     fontSize: 13,
-    color: palette.danger,
+    color: palette.primary,
     fontWeight: '600',
   },
   weightDiffDown: {
     fontSize: 13,
-    color: palette.success,
+    color: palette.primary,
     fontWeight: '600',
   },
   weightDiffSame: {

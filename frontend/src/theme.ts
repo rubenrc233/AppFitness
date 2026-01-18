@@ -31,6 +31,7 @@ export const palette = {
   danger: '#EF4444',
   warning: '#F59E0B',
   warningMuted: 'rgba(245, 158, 11, 0.15)',
+  warningGlow: 'rgba(245, 158, 11, 0.1)',
 };
 
 export const withOpacity = (hexColor: string, opacity: number) => {

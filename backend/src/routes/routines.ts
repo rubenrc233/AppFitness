@@ -262,7 +262,7 @@ router.put('/days/:dayId/exercises/reorder', authenticateToken, async (req, res)
     // Actualizar el order_index de cada ejercicio según su nueva posición
     for (let i = 0; i < exerciseIds.length; i++) {
       await connection.query(
-        'UPDATE day_exercises SET order_index = ? WHERE id = ? AND day_id = ?',
+        'UPDATE day_exercises SET order_index = ? WHERE id = ? AND routine_day_id = ?',
         [i, exerciseIds[i], dayId]
       );
     }

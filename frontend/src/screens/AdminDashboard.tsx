@@ -301,6 +301,16 @@ export default function AdminDashboard({ navigation }: any) {
             const isBlocked = item.is_enabled === false;
             const reviewInfo = formatReviewDate(item.next_due_date);
             
+            // Calcular si la revisión es en menos de 5 días
+            const isReviewSoon = item.next_due_date && !isBlocked ? (() => {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const reviewDate = new Date(item.next_due_date);
+              reviewDate.setHours(0, 0, 0, 0);
+              const diffDays = Math.ceil((reviewDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+              return diffDays >= 0 && diffDays < 5;
+            })() : false;
+            
             return (
               <TouchableOpacity
                 style={[styles.clientCard, isBlocked && styles.clientCardBlocked]}
@@ -315,20 +325,28 @@ export default function AdminDashboard({ navigation }: any) {
                   />
                 </View>
                 <View style={styles.clientInfo}>
-                  <Text style={[styles.clientName, isBlocked && styles.clientNameBlocked]}>
+                  <Text style={[
+                    styles.clientName, 
+                    isBlocked && styles.clientNameBlocked,
+                    isReviewSoon && styles.clientNameUrgent
+                  ]}>
                     {item.name}
                   </Text>
                   <Text style={styles.clientEmail}>{item.email}</Text>
                   {reviewInfo && !isBlocked && (
-                    <View style={styles.reviewBadge}>
+                    <View style={[
+                      styles.reviewBadge,
+                      isReviewSoon && styles.reviewBadgeUrgent
+                    ]}>
                       <Ionicons 
                         name="calendar-outline" 
                         size={12} 
-                        color={reviewInfo.isOverdue ? palette.danger : palette.primaryLight} 
+                        color={reviewInfo.isOverdue ? palette.danger : isReviewSoon ? palette.warning : palette.primaryLight} 
                       />
                       <Text style={[
                         styles.reviewText,
-                        reviewInfo.isOverdue && styles.reviewTextOverdue
+                        reviewInfo.isOverdue && styles.reviewTextOverdue,
+                        isReviewSoon && styles.reviewTextUrgent
                       ]}>
                         {reviewInfo.text}
                       </Text>
@@ -432,7 +450,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 54,
+    paddingTop: spacing.md,
     paddingBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
@@ -588,6 +606,10 @@ const styles = StyleSheet.create({
   clientNameBlocked: {
     color: palette.muted,
   },
+  clientNameUrgent: {
+    color: palette.warning,
+    fontWeight: '700',
+  },
   clientEmail: {
     fontSize: 13,
     color: palette.muted,
@@ -599,12 +621,22 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 4,
   },
+  reviewBadgeUrgent: {
+    backgroundColor: palette.warningGlow,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
   reviewText: {
     fontSize: 12,
     color: palette.primaryLight,
   },
   reviewTextOverdue: {
     color: palette.danger,
+  },
+  reviewTextUrgent: {
+    color: palette.warning,
+    fontWeight: '600',
   },
   emptyContainer: {
     alignItems: 'center',
