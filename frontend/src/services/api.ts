@@ -219,7 +219,15 @@ export const dietService = {
   },
 
   // Crear alimento custom
-  createCustomFood: async (data: { name: string; category: string; created_by_user_id: number }) => {
+  createCustomFood: async (data: { 
+    name: string; 
+    category: string; 
+    created_by_user_id: number;
+    calories_per_100g?: number;
+    protein_per_100g?: number;
+    carbs_per_100g?: number;
+    fat_per_100g?: number;
+  }) => {
     const response = await api.post('/diets/foods', data);
     return response.data;
   },

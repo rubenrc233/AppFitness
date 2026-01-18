@@ -22,14 +22,57 @@ router.get('/foods', async (req: Request, res: Response) => {
 // Crear alimento custom
 router.post('/foods', async (req: Request, res: Response) => {
   try {
-    const { name, category, created_by_user_id } = req.body;
+    const { 
+      name, 
+      category, 
+      created_by_user_id,
+      calories_per_100g,
+      protein_per_100g,
+      carbs_per_100g,
+      fat_per_100g,
+      fiber_per_100g,
+      sugar_per_100g
+    } = req.body;
     
     const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO food_library (name, category, is_custom, created_by_user_id) VALUES (?, ?, TRUE, ?)',
-      [name, category, created_by_user_id]
+      `INSERT INTO food_library (
+        name, 
+        category, 
+        is_custom, 
+        created_by_user_id,
+        calories_per_100g,
+        protein_per_100g,
+        carbs_per_100g,
+        fat_per_100g,
+        fiber_per_100g,
+        sugar_per_100g
+      ) VALUES (?, ?, TRUE, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        name, 
+        category, 
+        created_by_user_id,
+        calories_per_100g || null,
+        protein_per_100g || null,
+        carbs_per_100g || null,
+        fat_per_100g || null,
+        fiber_per_100g || null,
+        sugar_per_100g || null
+      ]
     );
     
-    res.status(201).json({ id: result.insertId, name, category, is_custom: true });
+    res.status(201).json({ 
+      id: result.insertId, 
+      name, 
+      category, 
+      is_custom: true,
+      created_by_user_id,
+      calories_per_100g,
+      protein_per_100g,
+      carbs_per_100g,
+      fat_per_100g,
+      fiber_per_100g,
+      sugar_per_100g
+    });
   } catch (error) {
     console.error('Error al crear alimento:', error);
     res.status(500).json({ error: 'Error al crear alimento' });

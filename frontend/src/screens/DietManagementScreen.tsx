@@ -74,6 +74,15 @@ export default function DietManagementScreen({ route, navigation }: any) {
   const [supplementNotes, setSupplementNotes] = useState('');
   const [editingSupplementId, setEditingSupplementId] = useState<number | null>(null);
 
+  // Alimento Custom
+  const [showCustomFoodModal, setShowCustomFoodModal] = useState(false);
+  const [customFoodName, setCustomFoodName] = useState('');
+  const [customFoodCategory, setCustomFoodCategory] = useState('');
+  const [customFoodCalories, setCustomFoodCalories] = useState('');
+  const [customFoodProtein, setCustomFoodProtein] = useState('');
+  const [customFoodCarbs, setCustomFoodCarbs] = useState('');
+  const [customFoodFat, setCustomFoodFat] = useState('');
+
   useEffect(() => {
     loadDiet();
     loadFoodLibrary();
@@ -569,6 +578,43 @@ export default function DietManagementScreen({ route, navigation }: any) {
       )
     : foodLibrary;
 
+  const handleCreateCustomFood = async () => {
+    if (!customFoodName.trim()) {
+      showError('Error', 'El nombre del alimento es requerido');
+      return;
+    }
+
+    try {
+      const userId = 1; // TODO: Obtener del contexto de autenticación
+      const newFood = await dietService.createCustomFood({
+        name: customFoodName.trim(),
+        category: customFoodCategory.trim() || 'Otro',
+        created_by_user_id: userId,
+        calories_per_100g: parseFloat(customFoodCalories) || 0,
+        protein_per_100g: parseFloat(customFoodProtein) || 0,
+        carbs_per_100g: parseFloat(customFoodCarbs) || 0,
+        fat_per_100g: parseFloat(customFoodFat) || 0,
+      });
+
+      // Añadir a la biblioteca local
+      setFoodLibrary([...foodLibrary, newFood]);
+      
+      // Limpiar y cerrar modal
+      setCustomFoodName('');
+      setCustomFoodCategory('');
+      setCustomFoodCalories('');
+      setCustomFoodProtein('');
+      setCustomFoodCarbs('');
+      setCustomFoodFat('');
+      setShowCustomFoodModal(false);
+      
+      showSuccess('Éxito', 'Alimento personalizado creado');
+    } catch (error) {
+      console.error('Error creating custom food:', error);
+      showError('Error', 'No se pudo crear el alimento');
+    }
+  };
+
   if (loading) {
     return <LoadingScreen message="Cargando dieta..." />;
   }
@@ -844,6 +890,15 @@ export default function DietManagementScreen({ route, navigation }: any) {
                             <Ionicons name="add-circle" size={24} color={palette.primary} />
                           </TouchableOpacity>
                         ))}
+                        
+                        {/* Botón para crear alimento custom */}
+                        <TouchableOpacity
+                          style={styles.customFoodButton}
+                          onPress={() => setShowCustomFoodModal(true)}
+                        >
+                          <Ionicons name="add-circle-outline" size={20} color={palette.primary} />
+                          <Text style={styles.customFoodButtonText}>Crear Alimento Personalizado</Text>
+                        </TouchableOpacity>
                       </ScrollView>
                     </View>
                   )}
@@ -1129,6 +1184,130 @@ export default function DietManagementScreen({ route, navigation }: any) {
           <Ionicons name="chevron-forward" size={20} color={palette.muted} />
         </View>
       </TouchableOpacity>
+
+      {/* Modal: Crear Alimento Custom */}
+      <Modal visible={showCustomFoodModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.customFoodModalContainer}
+          >
+            <View style={styles.customFoodModal}>
+              <View style={styles.customFoodModalHeader}>
+                <Text style={styles.customFoodModalTitle}>Crear Alimento Personalizado</Text>
+                <TouchableOpacity onPress={() => setShowCustomFoodModal(false)}>
+                  <Ionicons name="close" size={28} color={palette.text} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                style={styles.customFoodModalScroll}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                <Text style={styles.customFoodLabel}>Nombre del alimento *</Text>
+                <TextInput
+                  style={styles.customFoodInput}
+                  placeholder="Ej: Pollo al curry casero"
+                  placeholderTextColor={palette.muted}
+                  value={customFoodName}
+                  onChangeText={setCustomFoodName}
+                />
+
+                <Text style={styles.customFoodLabel}>Categoría</Text>
+                <TextInput
+                  style={styles.customFoodInput}
+                  placeholder="Ej: Carnes, Lácteos, Otro"
+                  placeholderTextColor={palette.muted}
+                  value={customFoodCategory}
+                  onChangeText={setCustomFoodCategory}
+                />
+
+                <Text style={styles.customFoodSectionTitle}>Valores nutricionales (por 100g)</Text>
+                <Text style={styles.customFoodSectionSubtitle}>Opcional - Puedes dejarlo en blanco</Text>
+
+                <View style={styles.customFoodRow}>
+                  <View style={styles.customFoodRowItem}>
+                    <Text style={styles.customFoodLabel}>Calorías</Text>
+                    <TextInput
+                      style={styles.customFoodInput}
+                      placeholder="0"
+                      placeholderTextColor={palette.muted}
+                      keyboardType="numeric"
+                      value={customFoodCalories}
+                      onChangeText={setCustomFoodCalories}
+                    />
+                  </View>
+                  <View style={styles.customFoodRowItem}>
+                    <Text style={styles.customFoodLabel}>Proteínas (g)</Text>
+                    <TextInput
+                      style={styles.customFoodInput}
+                      placeholder="0"
+                      placeholderTextColor={palette.muted}
+                      keyboardType="numeric"
+                      value={customFoodProtein}
+                      onChangeText={setCustomFoodProtein}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.customFoodRow}>
+                  <View style={styles.customFoodRowItem}>
+                    <Text style={styles.customFoodLabel}>Carbohidratos (g)</Text>
+                    <TextInput
+                      style={styles.customFoodInput}
+                      placeholder="0"
+                      placeholderTextColor={palette.muted}
+                      keyboardType="numeric"
+                      value={customFoodCarbs}
+                      onChangeText={setCustomFoodCarbs}
+                    />
+                  </View>
+                  <View style={styles.customFoodRowItem}>
+                    <Text style={styles.customFoodLabel}>Grasas (g)</Text>
+                    <TextInput
+                      style={styles.customFoodInput}
+                      placeholder="0"
+                      placeholderTextColor={palette.muted}
+                      keyboardType="numeric"
+                      value={customFoodFat}
+                      onChangeText={setCustomFoodFat}
+                    />
+                  </View>
+                </View>
+              </ScrollView>
+
+              <View style={styles.customFoodModalFooter}>
+                <TouchableOpacity
+                  style={styles.customFoodCancelBtn}
+                  onPress={() => {
+                    setShowCustomFoodModal(false);
+                    setCustomFoodName('');
+                    setCustomFoodCategory('');
+                    setCustomFoodCalories('');
+                    setCustomFoodProtein('');
+                    setCustomFoodCarbs('');
+                    setCustomFoodFat('');
+                  }}
+                >
+                  <Text style={styles.customFoodCancelText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.customFoodSaveBtn,
+                    !customFoodName.trim() && styles.customFoodSaveBtnDisabled,
+                  ]}
+                  onPress={handleCreateCustomFood}
+                  disabled={!customFoodName.trim()}
+                >
+                  <Ionicons name="checkmark" size={20} color={palette.text} />
+                  <Text style={styles.customFoodSaveText}>Crear Alimento</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
 
       {/* Custom Alert */}
       <CustomAlert
@@ -2398,5 +2577,124 @@ const styles = StyleSheet.create({
   },
   supplementListBtn: {
     padding: spacing.xs,
+  },
+  // Estilos para alimento custom
+  customFoodButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.surface,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    marginTop: spacing.sm,
+    borderWidth: 1,
+    borderColor: palette.primary,
+    borderStyle: 'dashed',
+    gap: spacing.xs,
+  },
+  customFoodButtonText: {
+    color: palette.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  customFoodModalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  customFoodModal: {
+    backgroundColor: palette.surface,
+    borderRadius: radius.lg,
+    margin: spacing.lg,
+    maxHeight: '80%',
+  },
+  customFoodModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
+  },
+  customFoodModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: palette.text,
+  },
+  customFoodModalScroll: {
+    padding: spacing.lg,
+  },
+  customFoodLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: palette.text,
+    marginBottom: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  customFoodInput: {
+    backgroundColor: palette.inputBg,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    color: palette.text,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  customFoodSectionTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: palette.text,
+    marginTop: spacing.lg,
+    marginBottom: spacing.xs,
+  },
+  customFoodSectionSubtitle: {
+    fontSize: 12,
+    color: palette.muted,
+    marginBottom: spacing.sm,
+  },
+  customFoodRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  customFoodRowItem: {
+    flex: 1,
+  },
+  customFoodModalFooter: {
+    flexDirection: 'row',
+    padding: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: palette.border,
+    gap: spacing.md,
+  },
+  customFoodCancelBtn: {
+    flex: 1,
+    backgroundColor: palette.surface,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  customFoodCancelText: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  customFoodSaveBtn: {
+    flex: 1,
+    backgroundColor: palette.primary,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  customFoodSaveBtnDisabled: {
+    opacity: 0.5,
+  },
+  customFoodSaveText: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
