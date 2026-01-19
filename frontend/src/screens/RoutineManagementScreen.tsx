@@ -1204,8 +1204,11 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
 
           <ScrollView 
             style={styles.wizardContentFlex}
+            contentContainerStyle={styles.wizardContentFlexContainer}
             showsVerticalScrollIndicator={true}
             nestedScrollEnabled={true}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.wizardStepContainer}>
               {/* Day Info */}
@@ -1282,7 +1285,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                     </Text>
                   </View>
                 ) : (
-                  <View style={styles.exercisesList}>
+                  <View style={styles.dayExercisesList}>
                     {dayExercises.map((ex, index) => (
                       <View key={ex.id} style={styles.wizardExerciseItem}>
                         <Text style={styles.wizardExerciseNumber}>{index + 1}</Text>
@@ -1347,6 +1350,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   style={styles.wizardMuscleGroupScroll}
+                  keyboardShouldPersistTaps="handled"
                 >
                   <TouchableOpacity
                     style={[
@@ -1391,6 +1395,8 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                   style={styles.wizardExerciseLibrary}
                   nestedScrollEnabled={true}
                   showsVerticalScrollIndicator={true}
+                  keyboardDismissMode="on-drag"
+                  keyboardShouldPersistTaps="handled"
                 >
                   {exerciseLibrary.map((exercise) => (
                     <TouchableOpacity
@@ -2200,6 +2206,9 @@ const styles = StyleSheet.create({
     maxHeight: 300,
     marginTop: spacing.md,
   },
+  dayExercisesList: {
+    marginTop: spacing.md,
+  },
   emptyExercises: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -2444,6 +2453,10 @@ const styles = StyleSheet.create({
   wizardContentFlex: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  wizardContentFlexContainer: {
+    flexGrow: 1,
+    paddingBottom: spacing.xl,
   },
   wizardStepContainer: {
     paddingBottom: spacing.xl,
