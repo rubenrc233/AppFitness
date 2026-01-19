@@ -637,10 +637,7 @@ export default function DietManagementScreen({ route, navigation }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={palette.text} />
         </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Dieta de {clientName}</Text>
-          {diet?.name && <Text style={styles.headerSubtitle}>{diet.name}</Text>}
-        </View>
+        <Text style={styles.headerTitle}>Dieta de {clientName}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -1354,6 +1351,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
@@ -1363,18 +1361,9 @@ const styles = StyleSheet.create({
   backButton: {
     padding: spacing.xs,
   },
-  headerContent: {
-    flex: 1,
-    marginLeft: spacing.sm,
-  },
   headerTitle: {
     ...typography.subtitle,
     color: palette.text,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: palette.muted,
-    marginTop: 2,
   },
   content: {
     flex: 1,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   TextInput,
   Modal,
+  AppState,
 } from 'react-native';
 import { AppIcon as Ionicons } from '../components/AppIcon';
 import LoadingScreen from '../components/LoadingScreen';
@@ -31,16 +32,42 @@ export default function WorkoutScreen({ route, navigation }: Props) {
   const [restSeconds, setRestSeconds] = useState(0);
   const [restRunning, setRestRunning] = useState(false);
   const [finishModalVisible, setFinishModalVisible] = useState(false);
+  
+  const workoutStartTimeRef = useRef<number>(Date.now());
+  const restStartTimeRef = useRef<number | null>(null);
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
     loadWorkout();
   }, []);
 
   useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        // App regresó al frente, recalcular tiempos
+        if (workoutStarted) {
+          const elapsedSeconds = Math.floor((Date.now() - workoutStartTimeRef.current) / 1000);
+          setWorkoutSeconds(elapsedSeconds);
+        }
+        if (restRunning && restStartTimeRef.current) {
+          const elapsedRestSeconds = Math.floor((Date.now() - restStartTimeRef.current) / 1000);
+          setRestSeconds(elapsedRestSeconds);
+        }
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [workoutStarted, restRunning]);
+
+  useEffect(() => {
     let interval: NodeJS.Timeout;
     if (workoutStarted) {
       interval = setInterval(() => {
-        setWorkoutSeconds((prev) => prev + 1);
+        const elapsedSeconds = Math.floor((Date.now() - workoutStartTimeRef.current) / 1000);
+        setWorkoutSeconds(elapsedSeconds);
       }, 1000);
     }
     return () => clearInterval(interval);
@@ -49,9 +76,15 @@ export default function WorkoutScreen({ route, navigation }: Props) {
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (restRunning) {
+      if (!restStartTimeRef.current) {
+        restStartTimeRef.current = Date.now() - (restSeconds * 1000);
+      }
       interval = setInterval(() => {
-        setRestSeconds((prev) => prev + 1);
+        const elapsedRestSeconds = Math.floor((Date.now() - restStartTimeRef.current!) / 1000);
+        setRestSeconds(elapsedRestSeconds);
       }, 1000);
+    } else {
+      restStartTimeRef.current = null;
     }
     return () => clearInterval(interval);
   }, [restRunning]);
@@ -124,9 +157,11 @@ export default function WorkoutScreen({ route, navigation }: Props) {
   const resetRestTimer = () => {
     setRestSeconds(0);
     setRestRunning(false);
+    restStartTimeRef.current = null;
   };
 
   const handleStartWorkout = () => {
+    workoutStartTimeRef.current = Date.now();
     setWorkoutStarted(true);
   };
 
@@ -230,6 +265,7 @@ export default function WorkoutScreen({ route, navigation }: Props) {
             <View style={styles.setsTable}>
               <View style={styles.tableHeader}>
                 <Text style={[styles.tableHeaderText, styles.colSerie]}>SERIE</Text>
+                <Text style={[styles.tableHeaderText, styles.colRepes]}>REPES</Text>
                 <Text style={[styles.tableHeaderText, styles.colAnterior]}>ANTERIOR</Text>
                 <Text style={[styles.tableHeaderText, styles.colHoy]}>HOY (kg)</Text>
               </View>
@@ -239,6 +275,9 @@ export default function WorkoutScreen({ route, navigation }: Props) {
                     <View style={styles.setNumberCircle}>
                       <Text style={styles.setNumberText}>{setNum}</Text>
                     </View>
+                  </View>
+                  <View style={styles.colRepes}>
+                    <Text style={styles.repsValue}>{exercise.reps}</Text>
                   </View>
                   <View style={styles.colAnterior}>
                     <Text style={styles.previousWeight}>
@@ -536,18 +575,27 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 10,
     letterSpacing: 0.5,
+    textAlign: 'center',
   },
   colSerie: {
-    width: 60,
+    width: 55,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  colRepes: {
+    width: 55,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   colAnterior: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   colHoy: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   tableRow: {
     flexDirection: 'row',
@@ -569,9 +617,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
+  repsValue: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
   previousWeight: {
     color: palette.muted,
     fontSize: 14,
+    textAlign: 'center',
   },
   weightInput: {
     width: 70,
