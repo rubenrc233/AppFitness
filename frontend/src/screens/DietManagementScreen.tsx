@@ -1213,8 +1213,10 @@ export default function DietManagementScreen({ route, navigation }: any) {
 
               <ScrollView
                 style={styles.customFoodModalScroll}
+                contentContainerStyle={styles.customFoodModalScrollContent}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
               >
                 <Text style={styles.customFoodLabel}>Nombre del alimento *</Text>
                 <TextInput
@@ -2636,6 +2638,9 @@ const styles = StyleSheet.create({
   customFoodModalScroll: {
     flex: 1,
     padding: spacing.lg,
+  },
+  customFoodModalScrollContent: {
+    paddingBottom: spacing.xl,
   },
   customFoodLabel: {
     fontSize: 13,

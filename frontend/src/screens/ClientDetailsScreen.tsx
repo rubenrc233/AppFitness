@@ -105,6 +105,7 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
           <Ionicons name="arrow-back" size={24} color={palette.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{clientName}</Text>
+        <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.content}>
@@ -199,6 +200,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
     paddingHorizontal: spacing.lg,

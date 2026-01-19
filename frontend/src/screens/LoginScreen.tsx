@@ -41,10 +41,10 @@ export default function LoginScreen({ navigation }: any) {
         <View style={styles.content}>
           <View style={styles.logoContainer}>
             <View style={styles.logoCircle}>
-              <Ionicons name="fitness" size={48} color={palette.primary} />
+              <Text style={styles.fireLogo}>🔥</Text>
             </View>
-            <Text style={styles.title}>HYERTROFFICE</Text>
-            <Text style={styles.tagline}>Transforma tu cuerpo</Text>
+            <Text style={styles.title}>EL INCINERADOR</Text>
+            <Text style={styles.tagline}>Quema grasa, gana músculo</Text>
           </View>
 
           <View style={styles.formContainer}>
@@ -138,24 +138,31 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: palette.primaryGlow,
-    borderWidth: 2,
+    backgroundColor: palette.surface,
+    borderWidth: 3,
     borderColor: palette.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
+    shadowColor: palette.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  fireLogo: {
+    fontSize: 56,
   },
   title: {
     fontSize: 26,
     fontWeight: '800',
-    color: palette.text,
+    color: palette.primary,
     letterSpacing: 3,
   },
   tagline: {
-    color: palette.textWarm,
+    color: palette.muted,
     fontSize: 14,
     marginTop: spacing.xs,
-    opacity: 0.7,
   },
   formContainer: {
     width: '100%',
@@ -175,7 +182,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: palette.inputBg,
+    backgroundColor: palette.surface,
     borderWidth: 1,
     borderColor: palette.border,
     borderRadius: radius.md,
@@ -204,9 +211,9 @@ const styles = StyleSheet.create({
     backgroundColor: palette.mutedAlt,
   },
   buttonText: {
-    color: palette.text,
+    color: palette.background,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   registerLink: {
     flexDirection: 'row',
@@ -218,7 +225,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   linkTextBold: {
-    color: palette.primaryLight,
+    color: palette.primary,
     fontSize: 14,
     fontWeight: '600',
   },

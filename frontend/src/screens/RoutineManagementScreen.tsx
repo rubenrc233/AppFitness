@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
+  FlatList,
 } from 'react-native';
 
 import { AppIcon as Ionicons } from '../components/AppIcon';
@@ -393,26 +394,12 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
   };
 
   const closeDayModal = async () => {
-    if (!dayModalDirty) {
+    // Guardar automáticamente si hay cambios
+    if (dayModalDirty) {
+      await saveDayModal();
+    } else {
       setViewDayModalVisible(false);
-      return;
     }
-
-    showConfirm(
-      'Guardar cambios',
-      'Tienes cambios sin guardar. ¿Quieres guardarlos antes de salir?',
-      async () => {
-        hideAlert();
-        await saveDayModal();
-      },
-      () => {
-        hideAlert();
-        setDayModalDirty(false);
-        setViewDayModalVisible(false);
-      },
-      'Guardar',
-      'Salir sin guardar'
-    );
   };
 
   const saveDayModal = async () => {
@@ -667,7 +654,10 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
       {loading ? (
         <LoadingScreen message="Cargando rutina..." />
       ) : (
-        <ScrollView style={styles.content}>
+        <ScrollView 
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+        >
         {!routine ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="fitness-outline" size={80} color={palette.primary} />
@@ -740,17 +730,6 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                 </TouchableOpacity>
               );
             })}
-
-            <TouchableOpacity
-              style={[styles.saveRoutineButton, !needsSave && styles.saveRoutineButtonDisabled]}
-              onPress={handleSaveRoutine}
-              disabled={!needsSave}
-            >
-              <Ionicons name="checkmark-circle" size={20} color={palette.text} />
-              <Text style={styles.saveRoutineButtonText}>
-                {needsSave ? 'Guardar Rutina' : 'Rutina Guardada'}
-              </Text>
-            </TouchableOpacity>
           </>
         )}
       </ScrollView>
@@ -1391,16 +1370,16 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                 </ScrollView>
 
                 {/* Exercise Library */}
-                <ScrollView 
+                <FlatList 
                   style={styles.wizardExerciseLibrary}
-                  nestedScrollEnabled={true}
+                  data={exerciseLibrary}
+                  keyExtractor={(item) => item.id.toString()}
                   showsVerticalScrollIndicator={true}
                   keyboardDismissMode="on-drag"
                   keyboardShouldPersistTaps="handled"
-                >
-                  {exerciseLibrary.map((exercise) => (
+                  nestedScrollEnabled={true}
+                  renderItem={({ item: exercise }) => (
                     <TouchableOpacity
-                      key={exercise.id}
                       style={styles.wizardLibraryItem}
                       onPress={() => handleAddExercise(exercise)}
                     >
@@ -1410,8 +1389,8 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                       </View>
                       <Ionicons name="add-circle-outline" size={24} color={palette.primary} />
                     </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                  )}
+                />
               </View>
             </View>
           </ScrollView>
@@ -1592,6 +1571,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: spacing.lg,
+  },
+  contentContainer: {
+    paddingBottom: spacing.xl * 3,
   },
   emptyContainer: {
     alignItems: 'center',

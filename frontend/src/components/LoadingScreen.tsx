@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { palette, spacing } from '../theme';
-import { AppIcon } from './AppIcon';
 
 interface LoadingScreenProps {
   message?: string;
@@ -64,10 +63,10 @@ export default function LoadingScreen({ message }: LoadingScreenProps) {
             { transform: [{ scale: pulseAnim }] }
           ]}
         >
-          <AppIcon name="fitness" size={64} color={palette.primary} />
+          <Text style={styles.fireLogo}>🔥</Text>
         </Animated.View>
         
-        <Text style={styles.title}>HYERTROFFICE</Text>
+        <Text style={styles.title}>EL INCINERADOR</Text>
         
         <View style={styles.dotsContainer}>
           <LoadingDot delay={0} />
@@ -135,18 +134,21 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: palette.primary,
     shadowColor: palette.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.8,
+    shadowRadius: 25,
+    elevation: 15,
+  },
+  fireLogo: {
+    fontSize: 60,
   },
   title: {
     fontSize: 28,
     fontWeight: '900',
-    color: palette.text,
+    color: palette.primary,
     marginTop: spacing.lg,
     letterSpacing: 3,
   },

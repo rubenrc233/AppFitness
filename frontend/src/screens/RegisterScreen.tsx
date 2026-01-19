@@ -187,13 +187,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: palette.text,
+    color: palette.primary,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    color: palette.textWarm,
-    opacity: 0.7,
+    color: palette.muted,
   },
   formContainer: {
     width: '100%',
@@ -213,7 +212,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: palette.inputBg,
+    backgroundColor: palette.surface,
     borderWidth: 1,
     borderColor: palette.border,
     borderRadius: radius.md,
@@ -240,9 +239,9 @@ const styles = StyleSheet.create({
     backgroundColor: palette.mutedAlt,
   },
   buttonText: {
-    color: palette.text,
+    color: palette.background,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   loginLink: {
     flexDirection: 'row',
@@ -255,7 +254,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   linkTextBold: {
-    color: palette.primaryLight,
+    color: palette.primary,
     fontSize: 14,
     fontWeight: '600',
   },

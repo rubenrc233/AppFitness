@@ -1,0 +1,8 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Llama principal -->
+  <path d="M32 8C32 8 20 20 20 32C20 38.6274 25.3726 44 32 44C38.6274 44 44 38.6274 44 32C44 20 32 8 32 8Z" fill="#FF6B35"/>
+  <!-- Llama interna -->
+  <path d="M32 16C32 16 26 24 26 32C26 35.3137 28.6863 38 32 38C35.3137 38 38 35.3137 38 32C38 24 32 16 32 16Z" fill="#FFB627"/>
+  <!-- Centro brillante -->
+  <ellipse cx="32" cy="32" rx="4" ry="6" fill="#FFF3E0"/>
+</svg>

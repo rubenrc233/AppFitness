@@ -1,37 +1,37 @@
-// Shared design tokens - Soft off-white light aesthetic (not pure white)
+// Shared design tokens - Estética Incinerador (fondo negro, tonos naranjas)
 export const palette = {
-  // Fondos claros (blanco roto)
-  background: '#F5F6F8',
-  surface: '#FFFFFF',
-  surfaceAlt: '#EEF2F6',
-  surfaceHighlight: '#E7EDF3',
-  inputBg: '#FFFFFF',
-  headerBg: '#FFFFFF',
+  // Fondos oscuros
+  background: '#0A0A0A',
+  surface: '#1A1A1A',
+  surfaceAlt: '#151515',
+  surfaceHighlight: '#252525',
+  inputBg: '#1A1A1A',
+  headerBg: '#0A0A0A',
 
   // Bordes
-  border: '#E2E8F0',
-  borderLight: '#CBD5E1',
+  border: '#2A2A2A',
+  borderLight: '#333333',
 
-  // Marca
-  primary: '#16D3D6',
-  primaryLight: '#5BEAF0',
-  primaryMuted: '#16D3D640',
-  primaryGlow: '#16D3D620',
-  accent: '#2BD4FF',
-  accentMuted: '#2BD4FF40',
+  // Marca - Tonos naranjas y fuego
+  primary: '#FF6B35',
+  primaryLight: '#FF8C5A',
+  primaryMuted: '#FF6B3540',
+  primaryGlow: '#FF6B3520',
+  accent: '#FFB627',
+  accentMuted: '#FFB62740',
 
   // Texto
-  text: '#0B1220',
-  textWarm: '#0F2233',
-  muted: '#5B6B7A',
-  mutedAlt: '#7A8A99',
+  text: '#FFFFFF',
+  textWarm: '#F5F5F5',
+  muted: '#999999',
+  mutedAlt: '#666666',
 
   // Estados
   success: '#22C55E',
   danger: '#EF4444',
-  warning: '#F59E0B',
-  warningMuted: 'rgba(245, 158, 11, 0.15)',
-  warningGlow: 'rgba(245, 158, 11, 0.1)',
+  warning: '#FFB627',
+  warningMuted: 'rgba(255, 182, 39, 0.15)',
+  warningGlow: 'rgba(255, 182, 39, 0.1)',
 };
 
 export const withOpacity = (hexColor: string, opacity: number) => {
