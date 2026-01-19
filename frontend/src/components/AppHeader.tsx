@@ -11,8 +11,7 @@ export default function AppHeader({ title }: Props) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.appName}>🔥 EL INCINERADOR</Text>
-        {title && <Text style={styles.subtitle}>{title}</Text>}
+        <Text style={styles.appName}>{title}</Text>
       </View>
     </SafeAreaView>
   );
@@ -37,11 +36,5 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: palette.primary,
     letterSpacing: 2,
-  },
-  subtitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: palette.muted,
-    marginLeft: spacing.xs,
   },
 });
