@@ -68,6 +68,7 @@ export default function DietManagementScreen({ route, navigation }: any) {
   // Suplementación
   const [supplements, setSupplements] = useState<Supplement[]>([]);
   const [showSupplementsModal, setShowSupplementsModal] = useState(false);
+  const [supplementsButtonHeight, setSupplementsButtonHeight] = useState(0);
   const [supplementName, setSupplementName] = useState('');
   const [supplementDosage, setSupplementDosage] = useState('');
   const [supplementTime, setSupplementTime] = useState('');
@@ -295,7 +296,7 @@ export default function DietManagementScreen({ route, navigation }: any) {
       foods: [],
     };
     setWizardOptions([defaultOption]);
-    setWizardEditingOptionIndex(0); // Ya expandida
+    setWizardEditingOptionIndex(null); // Todas cerradas por defecto
     setWizardFoodSearch('');
     setWizardVisible(true);
   };
@@ -332,7 +333,7 @@ export default function DietManagementScreen({ route, navigation }: any) {
     }
     
     setWizardOptions(wizardOpts);
-    setWizardEditingOptionIndex(0);
+    setWizardEditingOptionIndex(null); // Todas cerradas por defecto
     setWizardFoodSearch('');
     setWizardVisible(true);
   };
@@ -627,6 +628,8 @@ export default function DietManagementScreen({ route, navigation }: any) {
     return acc;
   }, {} as { [category: string]: FoodItem[] });
 
+  const scrollBottomPadding = supplementsButtonHeight > 0 ? supplementsButtonHeight + 48 : 160;
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -641,7 +644,11 @@ export default function DietManagementScreen({ route, navigation }: any) {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
+        showsVerticalScrollIndicator={false}
+      >
         {!diet ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="restaurant-outline" size={80} color={palette.primary} />
@@ -1170,6 +1177,10 @@ export default function DietManagementScreen({ route, navigation }: any) {
       {/* Botón de suplementación */}
       <TouchableOpacity 
         style={styles.supplementsButton}
+        onLayout={(e) => {
+          const height = e.nativeEvent.layout.height;
+          setSupplementsButtonHeight((prev) => (prev === height ? prev : height));
+        }}
         onPress={() => setShowSupplementsModal(true)}
       >
         <View style={styles.supplementsButtonContent}>
@@ -1342,7 +1353,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingTop: 54,
+    paddingTop: spacing.md,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: palette.border,
@@ -1875,15 +1886,16 @@ const styles = StyleSheet.create({
   deleteRecipeButton: {
     padding: spacing.xs,
   },
-  // === WIZARD STYLES ===
+  
   wizardModal: {
     backgroundColor: palette.surface,
     borderRadius: radius.lg,
     width: '100%',
-    maxHeight: '95%',
-    minHeight: '85%',
+    height: '90%',
     borderWidth: 1,
     borderColor: palette.border,
+    display: 'flex',
+    flexDirection: 'column',
   },
   wizardHeader: {
     flexDirection: 'row',
@@ -2605,7 +2617,8 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surface,
     borderRadius: radius.lg,
     margin: spacing.lg,
-    maxHeight: '80%',
+    flex: 1,
+    maxHeight: '85%',
   },
   customFoodModalHeader: {
     flexDirection: 'row',
@@ -2621,6 +2634,7 @@ const styles = StyleSheet.create({
     color: palette.text,
   },
   customFoodModalScroll: {
+    flex: 1,
     padding: spacing.lg,
   },
   customFoodLabel: {

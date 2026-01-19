@@ -221,7 +221,12 @@ export default function ProgressHistoryScreen({ route, navigation }: Props) {
                   </View>
                 </View>
 
-                <View style={styles.photoGrid}>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.photoGridScroll}
+                  contentContainerStyle={styles.photoGrid}
+                >
                   <TouchableOpacity 
                     style={styles.photoContainer}
                     onPress={() => setSelectedPhoto(update.front_photo_url)}
@@ -252,7 +257,7 @@ export default function ProgressHistoryScreen({ route, navigation }: Props) {
                       <Text style={styles.photoLabel}>Extra</Text>
                     </TouchableOpacity>
                   )}
-                </View>
+                </ScrollView>
 
                 {index < history.length - 1 && (
                   <View style={styles.weightDiff}>
@@ -485,12 +490,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
   },
+  photoGridScroll: {
+    marginVertical: spacing.sm,
+  },
   photoGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingRight: spacing.lg,
   },
   photoContainer: {
-    width: '31%',
+    width: 110,
   },
   thumbnail: {
     width: '100%',
