@@ -130,7 +130,7 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
       onPress: () => setStepsModalVisible(true),
     },
     {
-      icon: 'cash-outline',
+      icon: 'wallet-outline',
       title: 'Sistema de Pagos',
       subtitle: currentPaymentConfig 
         ? `${currentPaymentConfig.amount}€ - ${getFrequencyLabel(currentPaymentConfig.frequency)}`
