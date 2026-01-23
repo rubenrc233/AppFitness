@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Bookmark,
+  Building2,
   Calendar,
   Camera,
   Check,
@@ -104,6 +105,8 @@ const ICONS: Record<string, LucideIconComponent> = {
   // Menu / Navigation
   menu: Menu,
   'menu-outline': Menu,
+  building: Building2,
+  'building-outline': Building2,
 
   // Finance
   wallet: Wallet,

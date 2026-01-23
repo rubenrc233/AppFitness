@@ -41,10 +41,10 @@ export default function LoginScreen({ navigation }: any) {
         <View style={styles.content}>
           <View style={styles.logoContainer}>
             <View style={styles.logoCircle}>
-              <Text style={styles.fireLogo}>🔥</Text>
+              <Ionicons name="building" size={50} color={palette.primary} />
             </View>
-            <Text style={styles.title}>EL INCINERADOR</Text>
-            <Text style={styles.tagline}>Quema grasa, gana músculo</Text>
+            <Text style={styles.title}>HypertrOffice</Text>
+            <Text style={styles.tagline}>Tu gimnasio, tu oficina</Text>
           </View>
 
           <View style={styles.formContainer}>

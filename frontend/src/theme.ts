@@ -1,37 +1,38 @@
-// Shared design tokens - Estética Incinerador (fondo negro, tonos naranjas)
+// Shared design tokens - Estética HypertrOffice (fondo claro, tonos azules cyan)
 export const palette = {
-  // Fondos oscuros
-  background: '#0A0A0A',
-  surface: '#1A1A1A',
-  surfaceAlt: '#151515',
-  surfaceHighlight: '#252525',
-  inputBg: '#1A1A1A',
-  headerBg: '#0A0A0A',
+  // Fondos claros
+  background: '#F8FAFC',
+  surface: '#FFFFFF',
+  surfaceAlt: '#F1F5F9',
+  surfaceHighlight: '#E0F2FE',
+  inputBg: '#F8FAFC',
+  headerBg: '#FFFFFF',
 
   // Bordes
-  border: '#2A2A2A',
-  borderLight: '#333333',
+  border: '#E2E8F0',
+  borderLight: '#CBD5E1',
 
-  // Marca - Tonos naranjas y fuego
-  primary: '#FF6B35',
-  primaryLight: '#FF8C5A',
-  primaryMuted: '#FF6B3540',
-  primaryGlow: '#FF6B3520',
-  accent: '#FFB627',
-  accentMuted: '#FFB62740',
+  // Marca - Tonos azules cyan
+  primary: '#06B6D4',
+  primaryLight: '#22D3EE',
+  primaryMuted: '#06B6D440',
+  primaryGlow: '#06B6D420',
+  accent: '#0EA5E9',
+  accentMuted: '#0EA5E940',
 
   // Texto
-  text: '#FFFFFF',
-  textWarm: '#F5F5F5',
-  muted: '#999999',
-  mutedAlt: '#666666',
+  text: '#0F172A',
+  textWarm: '#1E293B',
+  muted: '#64748B',
+  mutedAlt: '#94A3B8',
 
   // Estados
-  success: '#22C55E',
+  success: '#10B981',
   danger: '#EF4444',
-  warning: '#FFB627',
-  warningMuted: 'rgba(255, 182, 39, 0.15)',
-  warningGlow: 'rgba(255, 182, 39, 0.1)',
+  warning: '#F59E0B',
+  warningMuted: 'rgba(245, 158, 11, 0.15)',
+  warningGlow: 'rgba(245, 158, 11, 0.1)',
+  dangerMuted: 'rgba(239, 68, 68, 0.15)',
 };
 
 export const withOpacity = (hexColor: string, opacity: number) => {

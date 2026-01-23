@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { palette, spacing } from '../theme';
+import { AppIcon } from './AppIcon';
 
 interface LoadingScreenProps {
   message?: string;
@@ -63,10 +64,10 @@ export default function LoadingScreen({ message }: LoadingScreenProps) {
             { transform: [{ scale: pulseAnim }] }
           ]}
         >
-          <Text style={styles.fireLogo}>🔥</Text>
+          <AppIcon name="building" size={60} color={palette.primary} strokeWidth={2.5} />
         </Animated.View>
         
-        <Text style={styles.title}>EL INCINERADOR</Text>
+        <Text style={styles.title}>HypertrOffice</Text>
         
         <View style={styles.dotsContainer}>
           <LoadingDot delay={0} />

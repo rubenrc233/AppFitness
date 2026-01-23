@@ -198,7 +198,7 @@ export default function AdminDashboard({ navigation }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🔥 EL INCINERADOR</Text>
+        <Text style={styles.headerTitle}>HypertrOffice</Text>
       </View>
 
       {/* Tabs */}
