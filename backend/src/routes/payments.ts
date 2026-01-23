@@ -129,7 +129,8 @@ router.get('/clients-status', authenticateToken, async (req: Request, res: Respo
   try {
     const [rows] = await pool.query(`
       SELECT 
-        u.id, u.name, u.email, u.is_enabled, u.next_due_date,
+        u.id, u.name, u.email,
+        ps.is_enabled, ps.next_due_date,
         pc.amount, pc.frequency, pc.start_date, pc.next_payment_date, pc.active,
         CASE 
           WHEN pc.next_payment_date <= CURDATE() THEN TRUE
@@ -142,6 +143,7 @@ router.get('/clients-status', authenticateToken, async (req: Request, res: Respo
         END as days_until_payment
       FROM users u
       LEFT JOIN payment_config pc ON u.id = pc.user_id
+      LEFT JOIN progress_settings ps ON u.id = ps.client_id
       WHERE u.role = 'client'
       ORDER BY 
         CASE WHEN pc.next_payment_date <= CURDATE() THEN 0 ELSE 1 END,
