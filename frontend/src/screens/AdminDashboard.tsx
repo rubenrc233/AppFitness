@@ -108,7 +108,7 @@ export default function AdminDashboard({ navigation }: any) {
     const blockedClients = filtered.filter(c => c.is_enabled === false);
 
     // Función para ordenar
-    const sortClients = (clientList: Client[]) => {
+    const sortClients = (clientList: ClientWithPaymentStatus[]) => {
       if (sortType === 'alphabetic') {
         return [...clientList].sort((a, b) => 
           a.name.toLowerCase().localeCompare(b.name.toLowerCase())

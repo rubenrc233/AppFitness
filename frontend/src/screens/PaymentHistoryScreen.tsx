@@ -486,8 +486,8 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: palette.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
     maxHeight: '80%',
   },
   modalHeader: {
