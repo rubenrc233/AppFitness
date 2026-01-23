@@ -224,7 +224,7 @@ router.post('/register', authenticateToken, async (req: Request, res: Response) 
 
 // Obtener histórico de pagos con filtros
 router.get('/history', authenticateToken, async (req: Request, res: Response) => {
-  const { userId, month, year, startDate, endDate } = req.query;
+  const { userId, userName, month, year, startDate, endDate } = req.query;
   
   try {
     let query = `
@@ -239,10 +239,16 @@ router.get('/history', authenticateToken, async (req: Request, res: Response) =>
     const params: any[] = [];
     let paramCount = 1;
     
-    // Filtro por usuario
+    // Filtro por usuario ID
     if (userId) {
       query += ` AND ph.user_id = ?`;
       params.push(userId);
+    }
+    
+    // Filtro por nombre de usuario (búsqueda parcial)
+    if (userName) {
+      query += ` AND u.name LIKE ?`;
+      params.push(`%${userName}%`);
     }
     
     // Filtro por mes y año

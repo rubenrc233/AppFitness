@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, TextInput, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, TextInput, Alert, Modal } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { clientService, paymentService } from '../services/api';
 import { Client, ClientWithPaymentStatus } from '../types';
@@ -198,26 +198,7 @@ export default function AdminDashboard({ navigation }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>🔥 EL INCINERADOR</Text>
-        </View>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity 
-            onPress={() => navigation.navigate('PaymentHistory')} 
-            style={styles.iconButton}
-          >
-            <Ionicons name="wallet-outline" size={22} color={palette.text} />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={() => navigation.navigate('Settings')} 
-            style={styles.iconButton}
-          >
-            <Ionicons name="settings-outline" size={22} color={palette.text} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleLogout} style={styles.iconButton}>
-            <Ionicons name="log-out-outline" size={22} color={palette.text} />
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.headerTitle}>🔥 EL INCINERADOR</Text>
       </View>
 
       {/* Tabs */}
@@ -366,13 +347,13 @@ export default function AdminDashboard({ navigation }: any) {
                   />
                 </View>
                 <View style={styles.clientInfo}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={[
                       styles.clientName, 
                       isBlocked && styles.clientNameBlocked,
                       isReviewSoon && styles.clientNameUrgent
                     ]}>
-                      {item.name}
+                      {item.name || 'Sin nombre'}
                     </Text>
                     {hasPaymentDue && (
                       <TouchableOpacity 
@@ -386,7 +367,7 @@ export default function AdminDashboard({ navigation }: any) {
                       </TouchableOpacity>
                     )}
                   </View>
-                  <Text style={styles.clientEmail}>{item.email}</Text>
+                  <Text style={styles.clientEmail}>{item.email || 'Sin email'}</Text>
                   {reviewInfo && !isBlocked && (
                     <View style={[
                       styles.reviewBadge,
@@ -402,7 +383,7 @@ export default function AdminDashboard({ navigation }: any) {
                         reviewInfo.isOverdue && styles.reviewTextOverdue,
                         isReviewSoon && styles.reviewTextUrgent
                       ]}>
-                        {reviewInfo.text}
+                        Revisión: {reviewInfo.text}
                       </Text>
                     </View>
                   )}
@@ -412,11 +393,17 @@ export default function AdminDashboard({ navigation }: any) {
                       paymentInfo.isDue && styles.paymentBadgeDue,
                       paymentInfo.isOverdue && styles.paymentBadgeOverdue
                     ]}>
+                      <Ionicons 
+                        name="wallet-outline" 
+                        size={12} 
+                        color={paymentInfo.isOverdue ? palette.danger : paymentInfo.isDue ? palette.success : palette.muted} 
+                      />
                       <Text style={[
                         styles.paymentText,
-                        paymentInfo.isDue && styles.paymentTextDue
+                        paymentInfo.isDue && styles.paymentTextDue,
+                        paymentInfo.isOverdue && styles.paymentTextOverdue
                       ]}>
-                        {paymentInfo.text}
+                        Pago: {paymentInfo.text}
                       </Text>
                     </View>
                   )}
@@ -494,6 +481,33 @@ export default function AdminDashboard({ navigation }: any) {
             />
           </>
         )}
+      </View>
+
+      {/* Menú Inferior */}
+      <View style={styles.bottomMenu}>
+        <TouchableOpacity
+          style={styles.bottomMenuItem}
+          onPress={() => navigation.navigate('PaymentHistory')}
+        >
+          <Ionicons name="wallet" size={24} color={palette.text} />
+          <Text style={styles.bottomMenuText}>Pagos</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.bottomMenuItem}
+          onPress={() => navigation.navigate('Settings')}
+        >
+          <Ionicons name="settings" size={24} color={palette.text} />
+          <Text style={styles.bottomMenuText}>Ajustes</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.bottomMenuItem}
+          onPress={handleLogout}
+        >
+          <Ionicons name="log-out" size={24} color={palette.danger} />
+          <Text style={[styles.bottomMenuText, styles.bottomMenuTextDanger]}>Salir</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Custom Alert */}
@@ -690,10 +704,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   reviewBadgeUrgent: {
-    backgroundColor: palette.warningGlow,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    // Sin fondo para evitar el subrayado visual
   },
   reviewText: {
     fontSize: 12,
@@ -715,6 +726,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: palette.primaryMuted,
     alignSelf: 'flex-start',
+    gap: 4,
   },
   paymentBadgeDue: {
     backgroundColor: '#FFF3CD',
@@ -730,6 +742,9 @@ const styles = StyleSheet.create({
   paymentTextDue: {
     color: '#856404',
   },
+  paymentTextOverdue: {
+    color: palette.danger,
+  },
   paymentDueButton: {
     backgroundColor: '#28a745',
     borderRadius: 12,
@@ -737,6 +752,7 @@ const styles = StyleSheet.create({
     height: 28,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
@@ -874,5 +890,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#fff',
+  },
+  // Menú Inferior
+  bottomMenu: {
+    flexDirection: 'row',
+    backgroundColor: palette.surface,
+    borderTopWidth: 1,
+    borderTopColor: palette.border,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  bottomMenuItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xs,
+  },
+  bottomMenuText: {
+    fontSize: 11,
+    color: palette.text,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  bottomMenuTextDanger: {
+    color: palette.danger,
   },
 });

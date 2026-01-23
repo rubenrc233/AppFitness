@@ -519,7 +519,7 @@ export const paymentService = {
   },
 
   // Obtener histórico de pagos
-  getPaymentHistory: async (filters?: { userId?: number; month?: number; year?: number; startDate?: string; endDate?: string }) => {
+  getPaymentHistory: async (filters?: { userId?: number; userName?: string; month?: number; year?: number; startDate?: string; endDate?: string }) => {
     const response = await api.get('/payments/history', { params: filters });
     return response.data;
   },

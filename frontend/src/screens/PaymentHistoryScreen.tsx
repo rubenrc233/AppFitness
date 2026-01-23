@@ -1,39 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, TextInput } from 'react-native';
 import { AppIcon as Ionicons } from '../components/AppIcon';
-import { paymentService, clientService } from '../services/api';
-import { PaymentHistory, PaymentStats, Client } from '../types';
+import { paymentService } from '../services/api';
+import { PaymentHistory } from '../types';
 import { palette, spacing, radius } from '../theme';
 import CustomAlert, { useCustomAlert } from '../components/CustomAlert';
-import { Picker } from '@react-native-picker/picker';
 
 export default function PaymentHistoryScreen({ navigation }: any) {
   const [payments, setPayments] = useState<PaymentHistory[]>([]);
   const [totalIncome, setTotalIncome] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [monthModalVisible, setMonthModalVisible] = useState(false);
+  const [yearModalVisible, setYearModalVisible] = useState(false);
   
   // Filtros
-  const [selectedUserId, setSelectedUserId] = useState<number | undefined>();
+  const [clientNameFilter, setClientNameFilter] = useState<string>('');
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>();
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-  const [clients, setClients] = useState<Client[]>([]);
   
   const { alertState, hideAlert, showError } = useCustomAlert();
 
   useEffect(() => {
-    loadClients();
     loadPayments();
   }, []);
-
-  const loadClients = async () => {
-    try {
-      const response = await clientService.getClients();
-      setClients(response.clients);
-    } catch (error) {
-      console.error('Error loading clients:', error);
-    }
-  };
 
   const loadPayments = async (filters?: any) => {
     setLoading(true);
@@ -48,30 +37,11 @@ export default function PaymentHistoryScreen({ navigation }: any) {
     }
   };
 
-  const applyFilters = () => {
-    const filters: any = {};
-    
-    if (selectedUserId) {
-      filters.userId = selectedUserId;
-    }
-    
-    if (selectedMonth) {
-      filters.month = selectedMonth;
-      filters.year = selectedYear;
-    } else if (selectedYear) {
-      filters.year = selectedYear;
-    }
-    
-    loadPayments(filters);
-    setFilterModalVisible(false);
-  };
-
   const clearFilters = () => {
-    setSelectedUserId(undefined);
+    setClientNameFilter('');
     setSelectedMonth(undefined);
     setSelectedYear(new Date().getFullYear());
     loadPayments();
-    setFilterModalVisible(false);
   };
 
   const formatDate = (dateStr: string) => {
@@ -117,7 +87,40 @@ export default function PaymentHistoryScreen({ navigation }: any) {
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
-  const hasActiveFilters = selectedUserId || selectedMonth;
+  const hasActiveFilters = clientNameFilter.trim() !== '' || selectedMonth;
+
+  const getMonthLabel = () => {
+    if (!selectedMonth) return 'Todos los meses';
+    return months.find(m => m.value === selectedMonth)?.label || 'Todos los meses';
+  };
+
+  const handleMonthSelect = (value: number | undefined) => {
+    setSelectedMonth(value);
+    setMonthModalVisible(false);
+    const filters: any = {};
+    if (clientNameFilter.trim()) filters.userName = clientNameFilter.trim();
+    if (value) {
+      filters.month = value;
+      filters.year = selectedYear;
+    } else if (selectedYear) {
+      filters.year = selectedYear;
+    }
+    loadPayments(filters);
+  };
+
+  const handleYearSelect = (value: number) => {
+    setSelectedYear(value);
+    setYearModalVisible(false);
+    const filters: any = {};
+    if (clientNameFilter.trim()) filters.userName = clientNameFilter.trim();
+    if (selectedMonth) {
+      filters.month = selectedMonth;
+      filters.year = value;
+    } else {
+      filters.year = value;
+    }
+    loadPayments(filters);
+  };
 
   return (
     <View style={styles.container}>
@@ -127,16 +130,7 @@ export default function PaymentHistoryScreen({ navigation }: any) {
           <Ionicons name="arrow-back" size={24} color={palette.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Histórico de Pagos</Text>
-        <TouchableOpacity 
-          onPress={() => setFilterModalVisible(true)} 
-          style={styles.filterButton}
-        >
-          <Ionicons 
-            name={hasActiveFilters ? "funnel" : "funnel-outline"} 
-            size={22} 
-            color={hasActiveFilters ? palette.primary : palette.text} 
-          />
-        </TouchableOpacity>
+        <View style={{ width: 40 }} />
       </View>
 
       {/* Total Card */}
@@ -151,19 +145,85 @@ export default function PaymentHistoryScreen({ navigation }: any) {
         </View>
       </View>
 
-      {/* Filters Info */}
-      {hasActiveFilters && (
-        <View style={styles.filtersInfo}>
-          <Text style={styles.filtersText}>
-            {selectedUserId && `Cliente: ${clients.find(c => c.id === selectedUserId)?.name}`}
-            {selectedUserId && selectedMonth && ' • '}
-            {selectedMonth && `${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`}
-          </Text>
-          <TouchableOpacity onPress={clearFilters}>
-            <Text style={styles.clearFilters}>Limpiar</Text>
-          </TouchableOpacity>
+      {/* Filtros */}
+      <View style={styles.filtersSection}>
+        <Text style={styles.filtersSectionTitle}>Filtros</Text>
+        
+        {/* Filtro de Cliente - Línea Superior */}
+        <View style={styles.filterItemFull}>
+          <Text style={styles.filterItemLabel}>Cliente</Text>
+          <View style={styles.filterInputWrapper}>
+            <TextInput
+              style={styles.filterInput}
+              placeholder="Buscar por nombre..."
+              placeholderTextColor={palette.muted}
+              value={clientNameFilter}
+              onChangeText={(text) => {
+                setClientNameFilter(text);
+                const filters: any = {};
+                if (text.trim()) filters.userName = text.trim();
+                if (selectedMonth) {
+                  filters.month = selectedMonth;
+                  filters.year = selectedYear;
+                } else if (selectedYear) {
+                  filters.year = selectedYear;
+                }
+                loadPayments(filters);
+              }}
+            />
+            {clientNameFilter && (
+              <TouchableOpacity
+                onPress={() => {
+                  setClientNameFilter('');
+                  const filters: any = {};
+                  if (selectedMonth) {
+                    filters.month = selectedMonth;
+                    filters.year = selectedYear;
+                  } else if (selectedYear) {
+                    filters.year = selectedYear;
+                  }
+                  loadPayments(filters);
+                }}
+                style={styles.clearIcon}
+              >
+                <Ionicons name="close-circle" size={16} color={palette.muted} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      )}
+        
+        {/* Filtros de Mes y Año - Línea Inferior */}
+        <View style={styles.filtersRow}>
+          <View style={styles.filterItem}>
+            <Text style={styles.filterItemLabel}>Mes</Text>
+            <TouchableOpacity 
+              style={styles.customPickerButton}
+              onPress={() => setMonthModalVisible(true)}
+            >
+              <Text style={styles.customPickerText}>{getMonthLabel()}</Text>
+              <Ionicons name="chevron-down" size={16} color={palette.muted} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.filterItem}>
+            <Text style={styles.filterItemLabel}>Año</Text>
+            <TouchableOpacity 
+              style={styles.customPickerButton}
+              onPress={() => setYearModalVisible(true)}
+            >
+              <Text style={styles.customPickerText}>{selectedYear}</Text>
+              <Ionicons name="chevron-down" size={16} color={palette.muted} />
+            </TouchableOpacity>
+          </View>
+        </View>
+        
+        {hasActiveFilters && (
+          <TouchableOpacity onPress={clearFilters} style={styles.clearFiltersButton}>
+            <Ionicons name="close-circle" size={16} color={palette.primary} />
+            <Text style={styles.clearFiltersText}>Limpiar Filtros</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Payments List */}
       <FlatList
@@ -221,90 +281,94 @@ export default function PaymentHistoryScreen({ navigation }: any) {
         }
       />
 
-      {/* Filter Modal */}
-      <Modal visible={filterModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filtrar Pagos</Text>
-              <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
+      {/* Month Modal */}
+      <Modal
+        visible={monthModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMonthModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setMonthModalVisible(false)}
+        >
+          <View style={styles.pickerModal}>
+            <View style={styles.pickerModalHeader}>
+              <Text style={styles.pickerModalTitle}>Seleccionar Mes</Text>
+              <TouchableOpacity onPress={() => setMonthModalVisible(false)}>
                 <Ionicons name="close" size={24} color={palette.text} />
               </TouchableOpacity>
             </View>
-
-            <ScrollView style={styles.modalBody}>
-              {/* Filtro por Cliente */}
-              <Text style={styles.filterLabel}>Cliente</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={selectedUserId}
-                  onValueChange={(value) => setSelectedUserId(value)}
-                  style={styles.picker}
+            <ScrollView style={styles.pickerModalList}>
+              {months.map((month) => (
+                <TouchableOpacity
+                  key={month.label}
+                  style={[
+                    styles.pickerModalItem,
+                    selectedMonth === month.value && styles.pickerModalItemSelected
+                  ]}
+                  onPress={() => handleMonthSelect(month.value)}
                 >
-                  <Picker.Item label="Todos los clientes" value={undefined} />
-                  {clients.map((client) => (
-                    <Picker.Item 
-                      key={client.id} 
-                      label={client.name} 
-                      value={client.id} 
-                    />
-                  ))}
-                </Picker>
-              </View>
-
-              {/* Filtro por Mes */}
-              <Text style={styles.filterLabel}>Mes</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={selectedMonth}
-                  onValueChange={(value) => setSelectedMonth(value)}
-                  style={styles.picker}
-                >
-                  {months.map((month) => (
-                    <Picker.Item 
-                      key={month.label} 
-                      label={month.label} 
-                      value={month.value} 
-                    />
-                  ))}
-                </Picker>
-              </View>
-
-              {/* Filtro por Año */}
-              <Text style={styles.filterLabel}>Año</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={selectedYear}
-                  onValueChange={(value) => setSelectedYear(value)}
-                  style={styles.picker}
-                >
-                  {years.map((year) => (
-                    <Picker.Item 
-                      key={year} 
-                      label={year.toString()} 
-                      value={year} 
-                    />
-                  ))}
-                </Picker>
-              </View>
+                  <Text style={[
+                    styles.pickerModalItemText,
+                    selectedMonth === month.value && styles.pickerModalItemTextSelected
+                  ]}>
+                    {month.label}
+                  </Text>
+                  {selectedMonth === month.value && (
+                    <Ionicons name="checkmark" size={20} color={palette.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
             </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={clearFilters}
-              >
-                <Text style={styles.clearButtonText}>Limpiar Filtros</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.applyButton}
-                onPress={applyFilters}
-              >
-                <Text style={styles.applyButtonText}>Aplicar</Text>
+      {/* Year Modal */}
+      <Modal
+        visible={yearModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setYearModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setYearModalVisible(false)}
+        >
+          <View style={styles.pickerModal}>
+            <View style={styles.pickerModalHeader}>
+              <Text style={styles.pickerModalTitle}>Seleccionar Año</Text>
+              <TouchableOpacity onPress={() => setYearModalVisible(false)}>
+                <Ionicons name="close" size={24} color={palette.text} />
               </TouchableOpacity>
             </View>
+            <ScrollView style={styles.pickerModalList}>
+              {years.map((year) => (
+                <TouchableOpacity
+                  key={year}
+                  style={[
+                    styles.pickerModalItem,
+                    selectedYear === year && styles.pickerModalItemSelected
+                  ]}
+                  onPress={() => handleYearSelect(year)}
+                >
+                  <Text style={[
+                    styles.pickerModalItemText,
+                    selectedYear === year && styles.pickerModalItemTextSelected
+                  ]}>
+                    {year}
+                  </Text>
+                  {selectedYear === year && (
+                    <Ionicons name="checkmark" size={20} color={palette.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
-        </View>
+        </TouchableOpacity>
       </Modal>
 
       {/* Custom Alert */}
@@ -343,9 +407,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: palette.text,
-  },
-  filterButton: {
-    padding: spacing.xs,
   },
   totalCard: {
     flexDirection: 'row',
@@ -386,25 +447,83 @@ const styles = StyleSheet.create({
     color: palette.muted,
     marginTop: 2,
   },
-  filtersInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+  // Filtros
+  filtersSection: {
     backgroundColor: palette.surface,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.md,
+    padding: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: palette.border,
   },
-  filtersText: {
-    fontSize: 13,
+  filtersSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
     color: palette.text,
+    marginBottom: spacing.sm,
+  },
+  filtersRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  filterItem: {
     flex: 1,
   },
-  clearFilters: {
+  filterItemFull: {
+    marginBottom: spacing.sm,
+  },
+  filterItemLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: palette.muted,
+    marginBottom: 4,
+  },
+  filterInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: palette.inputBg,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: palette.border,
+    paddingHorizontal: spacing.sm,
+    height: 40,
+  },
+  filterInput: {
+    flex: 1,
+    color: palette.text,
+    fontSize: 14,
+    paddingVertical: 0,
+  },
+  clearIcon: {
+    marginLeft: spacing.xs,
+    padding: 2,
+  },
+  customPickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: palette.inputBg,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: palette.border,
+    paddingHorizontal: spacing.sm,
+    height: 40,
+  },
+  customPickerText: {
+    color: palette.text,
+    fontSize: 14,
+  },
+  clearFiltersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
+    gap: spacing.xs,
+  },
+  clearFiltersText: {
     fontSize: 13,
     color: palette.primary,
     fontWeight: '600',
@@ -478,19 +597,22 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     textAlign: 'center',
   },
-  // Modal styles
+  // Custom Picker Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
   },
-  modalContent: {
+  pickerModal: {
     backgroundColor: palette.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    maxHeight: '80%',
+    borderRadius: radius.lg,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '70%',
   },
-  modalHeader: {
+  pickerModalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -498,58 +620,31 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: palette.border,
   },
-  modalTitle: {
+  pickerModalTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: palette.text,
   },
-  modalBody: {
-    padding: spacing.lg,
+  pickerModalList: {
+    maxHeight: 400,
   },
-  filterLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: palette.text,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-  },
-  pickerContainer: {
-    backgroundColor: palette.inputBg,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: palette.border,
-    overflow: 'hidden',
-  },
-  picker: {
-    color: palette.text,
-  },
-  modalActions: {
+  pickerModalItem: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    padding: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: palette.border,
-  },
-  clearButton: {
-    flex: 1,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: palette.surfaceAlt,
     alignItems: 'center',
-  },
-  clearButtonText: {
-    color: palette.muted,
-    fontWeight: '600',
-  },
-  applyButton: {
-    flex: 1,
+    justifyContent: 'space-between',
     padding: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: palette.primary,
-    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
   },
-  applyButtonText: {
-    color: '#FFFFFF',
+  pickerModalItemSelected: {
+    backgroundColor: palette.primaryMuted,
+  },
+  pickerModalItemText: {
+    fontSize: 16,
+    color: palette.text,
+  },
+  pickerModalItemTextSelected: {
+    color: palette.primary,
     fontWeight: '600',
   },
 });

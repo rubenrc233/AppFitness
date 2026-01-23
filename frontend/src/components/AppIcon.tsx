@@ -46,6 +46,12 @@ import {
   X,
   XCircle,
   Footprints,
+  Wallet,
+  Menu,
+  Filter,
+  Receipt,
+  Repeat,
+  Circle,
 } from 'lucide-react-native';
 
 type LucideIconComponent = React.ComponentType<any>;
@@ -92,7 +98,26 @@ const ICONS: Record<string, LucideIconComponent> = {
   'mail-outline': Mail,
   'lock-closed': Lock,
   'lock-closed-outline': Lock,
+  'log-out': LogOut,
   'log-out-outline': LogOut,
+
+  // Menu / Navigation
+  menu: Menu,
+  'menu-outline': Menu,
+
+  // Finance
+  wallet: Wallet,
+  'wallet-outline': Wallet,
+
+  // Filtering / Organization
+  funnel: Filter,
+  'funnel-outline': Filter,
+  receipt: Receipt,
+  'receipt-outline': Receipt,
+  repeat: Repeat,
+  'repeat-outline': Repeat,
+  'close-circle': XCircle,
+  'information-circle-outline': Circle,
 
   // Fitness / tracking
   flame: Flame,
