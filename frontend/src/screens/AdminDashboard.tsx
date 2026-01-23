@@ -433,13 +433,13 @@ export default function AdminDashboard({ navigation }: any) {
                         reviewInfo.isOverdue && styles.reviewTextOverdue,
                         isReviewSoon && styles.reviewTextUrgent
                       ]}>
-                        Revisión: {reviewInfo.text}
+                        {`Revisión: ${reviewInfo.text}`}
                       </Text>
                     </View>
                   )}
-                  {(() => {
+                  {!isBlocked && (() => {
                     const daysUntilPayment = calculateDaysUntilPayment(item.next_payment_date);
-                    if (!daysUntilPayment || isBlocked) return null;
+                    if (!daysUntilPayment) return null;
                     return (
                       <View style={[
                         styles.paymentBadge,
@@ -456,7 +456,7 @@ export default function AdminDashboard({ navigation }: any) {
                           daysUntilPayment.isDue && styles.paymentTextDue,
                           daysUntilPayment.isOverdue && styles.paymentTextOverdue
                         ]}>
-                          Pago: {daysUntilPayment.text}
+                          {`Pago: ${daysUntilPayment.text}`}
                         </Text>
                       </View>
                     );
