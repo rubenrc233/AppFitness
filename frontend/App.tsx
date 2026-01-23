@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { palette } from './src/theme';
 import LoadingScreen from './src/components/LoadingScreen';
+import ErrorBoundary from './src/components/ErrorBoundary';
 
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -70,8 +71,10 @@ function Navigation() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Navigation />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <Navigation />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

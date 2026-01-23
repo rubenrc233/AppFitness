@@ -26,11 +26,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const token = await AsyncStorage.getItem('token');
       if (token) {
+        console.log('🔑 Token encontrado, verificando usuario...');
         const data = await authService.getCurrentUser();
+        console.log('✅ Usuario cargado:', data.user?.email);
         setUser(data.user);
+      } else {
+        console.log('ℹ️ No hay token guardado');
       }
-    } catch (error) {
-      console.error('Error loading user:', error);
+    } catch (error: any) {
+      console.error('❌ Error loading user:', error.message);
+      // Si el token es inválido, lo eliminamos
+      if (error.response?.status === 401) {
+        console.log('🔒 Token inválido, limpiando...');
+        await AsyncStorage.removeItem('token');
+      }
     } finally {
       setLoading(false);
     }
@@ -40,11 +49,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('🔐 Intentando login con:', email);
       const data = await authService.login(email, password);
-      console.log('✅ Login exitoso:', data.user);
-      setUser(data.user);
+      console.log('✅ Login exitoso:', data.user?.email);
+      if (data.user) {
+        setUser(data.user);
+      } else {
+        throw new Error('No se recibieron datos del usuario');
+      }
     } catch (error: any) {
-      console.error('❌ Error en login:', error);
+      console.error('❌ Error en login:', error.message);
       console.error('❌ Response:', error.response?.data);
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('El servidor tardó demasiado. Por favor, intenta de nuevo.');
+      }
+      if (!error.response) {
+        throw new Error('No se pudo conectar al servidor. Verifica tu conexión.');
+      }
       throw new Error(error.response?.data?.error || 'Error al iniciar sesión');
     }
   }

@@ -6,6 +6,7 @@ const API_URL = 'https://appfitness-l641.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_URL,
+  timeout: 30000, // 30 segundos timeout (Render puede tardar en despertar)
   headers: {
     'Content-Type': 'application/json',
   },
@@ -19,6 +20,21 @@ api.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+// Interceptor para manejar errores de respuesta
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('❌ API Error:', error.message);
+    if (error.code === 'ECONNABORTED') {
+      console.error('⏱️ Timeout - El servidor tardó demasiado en responder');
+    }
+    if (!error.response) {
+      console.error('🌐 Error de red - No se pudo conectar al servidor');
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const authService = {
   register: async (name: string, email: string, password: string, role: 'admin' | 'client' = 'client') => {
