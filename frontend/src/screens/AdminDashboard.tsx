@@ -7,7 +7,7 @@ import { AppIcon as Ionicons } from '../components/AppIcon';
 import { palette, spacing, radius, typography } from '../theme';
 import CustomAlert, { useCustomAlert } from '../components/CustomAlert';
 
-type SortType = 'alphabetic' | 'review';
+type SortType = 'alphabetic' | 'review' | 'payment';
 type TabType = 'clients' | 'pending';
 
 export default function AdminDashboard({ navigation }: any) {
@@ -113,7 +113,7 @@ export default function AdminDashboard({ navigation }: any) {
         return [...clientList].sort((a, b) => 
           a.name.toLowerCase().localeCompare(b.name.toLowerCase())
         );
-      } else {
+      } else if (sortType === 'review') {
         // Ordenar por próxima revisión
         return [...clientList].sort((a, b) => {
           // Si no tiene fecha de revisión, va al final
@@ -124,6 +124,18 @@ export default function AdminDashboard({ navigation }: any) {
           if (!b.next_due_date) return -1;
           
           return new Date(a.next_due_date).getTime() - new Date(b.next_due_date).getTime();
+        });
+      } else {
+        // Ordenar por próximo pago
+        return [...clientList].sort((a, b) => {
+          // Si no tiene configuración de pago, va al final
+          if (!a.next_payment_date && !b.next_payment_date) {
+            return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+          }
+          if (!a.next_payment_date) return 1;
+          if (!b.next_payment_date) return -1;
+          
+          return new Date(a.next_payment_date).getTime() - new Date(b.next_payment_date).getTime();
         });
       }
     };
@@ -173,6 +185,31 @@ export default function AdminDashboard({ navigation }: any) {
     }
     
     return null;
+  };
+
+  const calculateDaysUntilPayment = (dateStr?: string) => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const paymentDate = new Date(date);
+    paymentDate.setHours(0, 0, 0, 0);
+    
+    const diffDays = Math.ceil((paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return { text: `Hace ${Math.abs(diffDays)} días`, isOverdue: true };
+    } else if (diffDays === 0) {
+      return { text: 'Hoy', isOverdue: false, isDue: true };
+    } else if (diffDays === 1) {
+      return { text: 'Mañana', isOverdue: false };
+    } else if (diffDays <= 7) {
+      return { text: `En ${diffDays} días`, isOverdue: false };
+    } else {
+      const day = date.getDate();
+      const month = date.toLocaleDateString('es-ES', { month: 'short' });
+      return { text: `${day} ${month}`, isOverdue: false };
+    }
   };
 
   const handleRegisterPayment = (client: ClientWithPaymentStatus) => {
@@ -285,6 +322,19 @@ export default function AdminDashboard({ navigation }: any) {
               Próx. revisión
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterButton, sortType === 'payment' && styles.filterButtonActive]}
+            onPress={() => setSortType('payment')}
+          >
+            <Ionicons 
+              name="wallet" 
+              size={16} 
+              color={sortType === 'payment' ? palette.text : palette.muted} 
+            />
+            <Text style={[styles.filterText, sortType === 'payment' && styles.filterTextActive]}>
+              Próx. pago
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Header con conteo */}
@@ -387,26 +437,30 @@ export default function AdminDashboard({ navigation }: any) {
                       </Text>
                     </View>
                   )}
-                  {paymentInfo && !isBlocked && (
-                    <View style={[
-                      styles.paymentBadge,
-                      paymentInfo.isDue && styles.paymentBadgeDue,
-                      paymentInfo.isOverdue && styles.paymentBadgeOverdue
-                    ]}>
-                      <Ionicons 
-                        name="wallet-outline" 
-                        size={12} 
-                        color={paymentInfo.isOverdue ? palette.danger : paymentInfo.isDue ? palette.success : palette.muted} 
-                      />
-                      <Text style={[
-                        styles.paymentText,
-                        paymentInfo.isDue && styles.paymentTextDue,
-                        paymentInfo.isOverdue && styles.paymentTextOverdue
+                  {(() => {
+                    const daysUntilPayment = calculateDaysUntilPayment(item.next_payment_date);
+                    if (!daysUntilPayment || isBlocked) return null;
+                    return (
+                      <View style={[
+                        styles.paymentBadge,
+                        daysUntilPayment.isDue && styles.paymentBadgeDue,
+                        daysUntilPayment.isOverdue && styles.paymentBadgeOverdue
                       ]}>
-                        Pago: {paymentInfo.text}
-                      </Text>
-                    </View>
-                  )}
+                        <Ionicons 
+                          name="wallet-outline" 
+                          size={12} 
+                          color={daysUntilPayment.isOverdue ? palette.danger : daysUntilPayment.isDue ? palette.success : palette.muted} 
+                        />
+                        <Text style={[
+                          styles.paymentText,
+                          daysUntilPayment.isDue && styles.paymentTextDue,
+                          daysUntilPayment.isOverdue && styles.paymentTextOverdue
+                        ]}>
+                          Pago: {daysUntilPayment.text}
+                        </Text>
+                      </View>
+                    );
+                  })()}
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={palette.muted} />
               </TouchableOpacity>
