@@ -13,7 +13,8 @@
     "setup-workouts": "ts-node src/setup-workouts.ts",
     "migrate-routines": "ts-node src/migrate-routines.ts",
     "setup-diets": "ts-node src/setup-diets.ts",
-    "setup-progress": "ts-node src/setup-progress.ts"
+    "setup-progress": "ts-node src/setup-progress.ts",
+    "setup-payments": "ts-node src/setup-payments.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

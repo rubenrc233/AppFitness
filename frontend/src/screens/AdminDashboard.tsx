@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, TextInput, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { clientService } from '../services/api';
-import { Client } from '../types';
+import { clientService, paymentService } from '../services/api';
+import { Client, ClientWithPaymentStatus } from '../types';
 import { AppIcon as Ionicons } from '../components/AppIcon';
 import { palette, spacing, radius, typography } from '../theme';
 import CustomAlert, { useCustomAlert } from '../components/CustomAlert';
@@ -11,7 +11,7 @@ type SortType = 'alphabetic' | 'review';
 type TabType = 'clients' | 'pending';
 
 export default function AdminDashboard({ navigation }: any) {
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<ClientWithPaymentStatus[]>([]);
   const [pendingClients, setPendingClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,7 +36,7 @@ export default function AdminDashboard({ navigation }: any) {
   const loadClients = async () => {
     setLoading(true);
     try {
-      const data = await clientService.getClients();
+      const data = await paymentService.getClientsPaymentStatus();
       setClients(data.clients);
     } catch (error: any) {
       showError('Error', 'No se pudieron cargar los clientes');
@@ -157,6 +157,40 @@ export default function AdminDashboard({ navigation }: any) {
     }
   };
 
+  const formatPaymentDate = (dateStr?: string, daysUntil?: number) => {
+    if (!dateStr) return null;
+    
+    if (daysUntil === 0) {
+      return { text: '💰 Pago hoy', isDue: true, isOverdue: false };
+    } else if (daysUntil && daysUntil < 0) {
+      return { text: `💰 Hace ${Math.abs(daysUntil)} días`, isDue: true, isOverdue: true };
+    } else if (daysUntil === 1) {
+      return { text: '💰 Mañana', isDue: false, isOverdue: false };
+    } else if (daysUntil && daysUntil <= 7) {
+      return { text: `💰 En ${daysUntil} días`, isDue: false, isOverdue: false };
+    } else if (daysUntil && daysUntil <= 30) {
+      return { text: `💰 ${daysUntil} días`, isDue: false, isOverdue: false };
+    }
+    
+    return null;
+  };
+
+  const handleRegisterPayment = (client: ClientWithPaymentStatus) => {
+    showConfirm(
+      'Registrar Pago',
+      `¿Confirmar pago de ${client.amount?.toFixed(2)}€ de ${client.name}?`,
+      async () => {
+        try {
+          await paymentService.registerPayment(client.id);
+          showSuccess('¡Registrado!', 'El pago ha sido registrado correctamente');
+          loadClients();
+        } catch (error) {
+          showError('Error', 'No se pudo registrar el pago');
+        }
+      }
+    );
+  };
+
   const activeCount = clients.filter(c => c.is_enabled !== false).length;
   const blockedCount = clients.filter(c => c.is_enabled === false).length;
   const pendingCount = pendingClients.length;
@@ -168,6 +202,12 @@ export default function AdminDashboard({ navigation }: any) {
           <Text style={styles.headerTitle}>🔥 EL INCINERADOR</Text>
         </View>
         <View style={styles.headerButtons}>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('PaymentHistory')} 
+            style={styles.iconButton}
+          >
+            <Ionicons name="wallet-outline" size={22} color={palette.text} />
+          </TouchableOpacity>
           <TouchableOpacity 
             onPress={() => navigation.navigate('Settings')} 
             style={styles.iconButton}
@@ -299,6 +339,8 @@ export default function AdminDashboard({ navigation }: any) {
           renderItem={({ item }) => {
             const isBlocked = item.is_enabled === false;
             const reviewInfo = formatReviewDate(item.next_due_date);
+            const paymentInfo = formatPaymentDate(item.next_payment_date, item.days_until_payment);
+            const hasPaymentDue = item.payment_due && item.active;
             
             // Calcular si la revisión es en menos de 5 días
             const isReviewSoon = item.next_due_date && !isBlocked ? (() => {
@@ -324,13 +366,26 @@ export default function AdminDashboard({ navigation }: any) {
                   />
                 </View>
                 <View style={styles.clientInfo}>
-                  <Text style={[
-                    styles.clientName, 
-                    isBlocked && styles.clientNameBlocked,
-                    isReviewSoon && styles.clientNameUrgent
-                  ]}>
-                    {item.name}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={[
+                      styles.clientName, 
+                      isBlocked && styles.clientNameBlocked,
+                      isReviewSoon && styles.clientNameUrgent
+                    ]}>
+                      {item.name}
+                    </Text>
+                    {hasPaymentDue && (
+                      <TouchableOpacity 
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleRegisterPayment(item);
+                        }}
+                        style={styles.paymentDueButton}
+                      >
+                        <Ionicons name="cash" size={18} color="#fff" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                   <Text style={styles.clientEmail}>{item.email}</Text>
                   {reviewInfo && !isBlocked && (
                     <View style={[
@@ -348,6 +403,20 @@ export default function AdminDashboard({ navigation }: any) {
                         isReviewSoon && styles.reviewTextUrgent
                       ]}>
                         {reviewInfo.text}
+                      </Text>
+                    </View>
+                  )}
+                  {paymentInfo && !isBlocked && (
+                    <View style={[
+                      styles.paymentBadge,
+                      paymentInfo.isDue && styles.paymentBadgeDue,
+                      paymentInfo.isOverdue && styles.paymentBadgeOverdue
+                    ]}>
+                      <Text style={[
+                        styles.paymentText,
+                        paymentInfo.isDue && styles.paymentTextDue
+                      ]}>
+                        {paymentInfo.text}
                       </Text>
                     </View>
                   )}
@@ -636,6 +705,43 @@ const styles = StyleSheet.create({
   reviewTextUrgent: {
     color: palette.warning,
     fontWeight: '600',
+  },
+  paymentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    backgroundColor: palette.primaryMuted,
+    alignSelf: 'flex-start',
+  },
+  paymentBadgeDue: {
+    backgroundColor: '#FFF3CD',
+  },
+  paymentBadgeOverdue: {
+    backgroundColor: '#F8D7DA',
+  },
+  paymentText: {
+    fontSize: 11,
+    color: palette.primary,
+    fontWeight: '600',
+  },
+  paymentTextDue: {
+    color: '#856404',
+  },
+  paymentDueButton: {
+    backgroundColor: '#28a745',
+    borderRadius: 12,
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
   },
   emptyContainer: {
     alignItems: 'center',

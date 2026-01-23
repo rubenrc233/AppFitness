@@ -201,3 +201,61 @@ export interface Supplement {
   notes: string | null;
   created_at: string;
 }
+
+// Sistema de Pagos
+export interface PaymentConfig {
+  id: number;
+  user_id: number;
+  amount: number;
+  frequency: 'monthly' | 'quarterly' | 'biannual' | 'annual';
+  start_date: string;
+  next_payment_date: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentHistory {
+  id: number;
+  user_id: number;
+  amount: number;
+  payment_date: string;
+  period_start: string;
+  period_end: string;
+  frequency: string;
+  notes?: string;
+  created_at: string;
+  user_name?: string;
+  user_email?: string;
+}
+
+export interface ClientWithPaymentStatus extends Client {
+  amount?: number;
+  frequency?: string;
+  start_date?: string;
+  next_payment_date?: string;
+  active?: boolean;
+  payment_due?: boolean;
+  days_until_payment?: number;
+}
+
+export interface PaymentStats {
+  year: number;
+  monthly: Array<{
+    month: number;
+    total: number;
+    count: number;
+  }>;
+  yearly: {
+    total: number;
+    count: number;
+  };
+  topClients: Array<{
+    id: number;
+    name: string;
+    email: string;
+    total_paid: number;
+    payment_count: number;
+  }>;
+}
+

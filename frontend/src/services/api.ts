@@ -493,4 +493,49 @@ export const supplementsService = {
   },
 };
 
+export const paymentService = {
+  // Configurar sistema de pagos de un cliente
+  configurePayment: async (userId: number, amount: number, frequency: 'monthly' | 'quarterly' | 'biannual' | 'annual', startDate?: string) => {
+    const response = await api.post('/payments/config', { userId, amount, frequency, startDate });
+    return response.data;
+  },
+
+  // Obtener configuración de pago de un cliente
+  getPaymentConfig: async (userId: number) => {
+    const response = await api.get(`/payments/config/${userId}`);
+    return response.data;
+  },
+
+  // Obtener todos los clientes con su estado de pago
+  getClientsPaymentStatus: async () => {
+    const response = await api.get('/payments/clients-status');
+    return response.data;
+  },
+
+  // Registrar un pago
+  registerPayment: async (userId: number, paymentDate?: string) => {
+    const response = await api.post('/payments/register', { userId, paymentDate });
+    return response.data;
+  },
+
+  // Obtener histórico de pagos
+  getPaymentHistory: async (filters?: { userId?: number; month?: number; year?: number; startDate?: string; endDate?: string }) => {
+    const response = await api.get('/payments/history', { params: filters });
+    return response.data;
+  },
+
+  // Obtener estadísticas de pagos
+  getPaymentStats: async (year?: number) => {
+    const response = await api.get('/payments/stats', { params: { year } });
+    return response.data;
+  },
+
+  // Desactivar sistema de pagos
+  deactivatePayment: async (userId: number) => {
+    const response = await api.delete(`/payments/config/${userId}`);
+    return response.data;
+  },
+};
+
 export default api;
+

@@ -13,6 +13,7 @@ import ClientHomeScreen from './src/screens/ClientHomeScreen';
 import RoutineManagementScreen from './src/screens/RoutineManagementScreen';
 import DietManagementScreen from './src/screens/DietManagementScreen';
 import ProgressHistoryScreen from './src/screens/ProgressHistoryScreen';
+import PaymentHistoryScreen from './src/screens/PaymentHistoryScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import PendingApprovalScreen from './src/screens/PendingApprovalScreen';
 
@@ -48,6 +49,7 @@ function Navigation() {
               headerTitleStyle: { color: palette.text }
             }}
           />
+          <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
         </Stack.Navigator>
       ) : user.is_approved === false ? (

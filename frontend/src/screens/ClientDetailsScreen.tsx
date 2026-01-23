@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView } from 'react-native';
 import { AppIcon as Ionicons } from '../components/AppIcon';
-import { clientService, stepsService } from '../services/api';
+import { clientService, stepsService, paymentService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { palette, spacing, radius, typography } from '../theme';
 import CustomAlert, { useCustomAlert } from '../components/CustomAlert';
+import { Picker } from '@react-native-picker/picker';
 
 export default function ClientDetailsScreen({ route, navigation }: any) {
   const { clientId } = route.params;
@@ -18,9 +19,16 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
   const [currentStepsGoal, setCurrentStepsGoal] = useState(10000);
   const [newStepsGoal, setNewStepsGoal] = useState('10000');
 
+  // Estado para modal de pagos
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentFrequency, setPaymentFrequency] = useState<'monthly' | 'quarterly' | 'biannual' | 'annual'>('monthly');
+  const [currentPaymentConfig, setCurrentPaymentConfig] = useState<any>(null);
+
   useEffect(() => {
     loadClientDetails();
     loadStepsGoal();
+    loadPaymentConfig();
   }, [clientId]);
 
   const loadClientDetails = async () => {
@@ -45,6 +53,46 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
     } catch (error) {
       console.error('Error loading steps goal:', error);
     }
+  };
+
+  const loadPaymentConfig = async () => {
+    try {
+      const response = await paymentService.getPaymentConfig(clientId);
+      if (response.config) {
+        setCurrentPaymentConfig(response.config);
+        setPaymentAmount(response.config.amount.toString());
+        setPaymentFrequency(response.config.frequency);
+      }
+    } catch (error) {
+      console.error('Error loading payment config:', error);
+    }
+  };
+
+  const handleSavePaymentConfig = async () => {
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      showError('Error', 'Ingresa una cantidad válida');
+      return;
+    }
+    
+    try {
+      await paymentService.configurePayment(clientId, amount, paymentFrequency);
+      showSuccess('Éxito', 'Sistema de pagos configurado');
+      setPaymentModalVisible(false);
+      loadPaymentConfig();
+    } catch (error) {
+      showError('Error', 'No se pudo configurar el sistema de pagos');
+    }
+  };
+
+  const getFrequencyLabel = (freq: string) => {
+    const labels: { [key: string]: string } = {
+      monthly: 'Mensual',
+      quarterly: 'Trimestral',
+      biannual: 'Semestral',
+      annual: 'Anual'
+    };
+    return labels[freq] || freq;
   };
 
   const handleSaveStepsGoal = async () => {
@@ -80,6 +128,14 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
       title: 'Meta de Pasos',
       subtitle: `${currentStepsGoal.toLocaleString()} pasos/día`,
       onPress: () => setStepsModalVisible(true),
+    },
+    {
+      icon: 'cash-outline',
+      title: 'Sistema de Pagos',
+      subtitle: currentPaymentConfig 
+        ? `${currentPaymentConfig.amount}€ - ${getFrequencyLabel(currentPaymentConfig.frequency)}`
+        : 'No configurado',
+      onPress: () => setPaymentModalVisible(true),
     },
     {
       icon: 'barbell-outline',
@@ -171,6 +227,73 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
               </TouchableOpacity>
             </View>
           </View>
+        </View>
+      </Modal>
+
+      {/* Modal para configurar sistema de pagos */}
+      <Modal visible={paymentModalVisible} animationType="fade" transparent>
+        <View style={styles.modalOverlay}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Sistema de Pagos</Text>
+              <Text style={styles.modalSubtitle}>
+                Configura la cuota de {clientName}
+              </Text>
+              
+              <Text style={styles.modalLabel}>Cantidad (€)</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={paymentAmount}
+                onChangeText={setPaymentAmount}
+                keyboardType="decimal-pad"
+                placeholder="50.00"
+                placeholderTextColor={palette.muted}
+              />
+              
+              <Text style={styles.modalLabel}>Frecuencia de Pago</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={paymentFrequency}
+                  onValueChange={(value) => setPaymentFrequency(value)}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Mensual" value="monthly" />
+                  <Picker.Item label="Trimestral (cada 3 meses)" value="quarterly" />
+                  <Picker.Item label="Semestral (cada 6 meses)" value="biannual" />
+                  <Picker.Item label="Anual" value="annual" />
+                </Picker>
+              </View>
+              
+              <Text style={styles.modalHint}>
+                {currentPaymentConfig 
+                  ? 'Actualizar el sistema creará un nuevo registro de pago' 
+                  : 'Al configurar se registrará el primer pago automáticamente'}
+              </Text>
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => {
+                    if (currentPaymentConfig) {
+                      setPaymentAmount(currentPaymentConfig.amount.toString());
+                      setPaymentFrequency(currentPaymentConfig.frequency);
+                    }
+                    setPaymentModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.modalCancelText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalSaveBtn}
+                  onPress={handleSavePaymentConfig}
+                >
+                  <Text style={styles.modalSaveText}>
+                    {currentPaymentConfig ? 'Actualizar' : 'Configurar'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
         </View>
       </Modal>
 
@@ -299,6 +422,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     borderWidth: 1,
     borderColor: palette.border,
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: palette.text,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  pickerContainer: {
+    backgroundColor: palette.inputBg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: palette.border,
+    overflow: 'hidden',
+  },
+  picker: {
+    color: palette.text,
   },
   modalHint: {
     fontSize: 12,
