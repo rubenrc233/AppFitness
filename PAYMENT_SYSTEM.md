@@ -86,9 +86,14 @@ Configurar o actualizar el sistema de pagos de un cliente.
   "userId": 1,
   "amount": 50.00,
   "frequency": "monthly",
-  "startDate": "2026-01-23" // opcional
+  "startDate": "2026-02-15" // Fecha del primer pago - REQUERIDO
 }
 ```
+
+**Comportamiento de la fecha de inicio:**
+- Si `startDate` es una fecha futura, el sistema NO registra ningún pago automático. El primer cobro será en la fecha indicada.
+- Si `startDate` es hoy o una fecha pasada, se registra el pago inicial automáticamente.
+- Esto permite configurar cuotas que empiecen el día que elijas del mes siguiente (o período correspondiente).
 
 ### GET `/api/payments/config/:userId`
 Obtener la configuración de pago de un cliente.
@@ -146,13 +151,16 @@ Desactivar el sistema de pagos de un cliente.
 
 ## Notas Importantes
 
-1. **Primer pago automático**: Cuando se configura el sistema de pagos, se registra automáticamente el primer pago con la fecha de configuración como fecha de pago.
+1. **Fecha de inicio personalizable**: Cuando se configura el sistema de pagos, puedes elegir la fecha exacta del primer cobro. Por ejemplo:
+   - Si configuras un pago mensual y eliges el día 15 del próximo mes, el primer cobro será ese día
+   - Si configuras un pago trimestral y eliges una fecha dentro de 3 meses, el primer cobro será en esa fecha
+   - El sistema solo registra un pago inicial si la fecha de inicio es hoy o pasada
 
 2. **Cálculo de próxima fecha**: El sistema calcula automáticamente la próxima fecha de pago basándose en la frecuencia:
-   - Monthly: +1 mes
-   - Quarterly: +3 meses
-   - Biannual: +6 meses
-   - Annual: +1 año
+   - Monthly: +1 mes desde la fecha de inicio
+   - Quarterly: +3 meses desde la fecha de inicio
+   - Biannual: +6 meses desde la fecha de inicio  
+   - Annual: +1 año desde la fecha de inicio
 
 3. **Indicadores en tiempo real**: Los indicadores se actualizan basándose en la fecha actual vs. la próxima fecha de pago configurada.
 

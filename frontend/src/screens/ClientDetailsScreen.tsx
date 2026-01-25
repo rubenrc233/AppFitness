@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, Platform } from 'react-native';
 import { AppIcon as Ionicons } from '../components/AppIcon';
 import { clientService, stepsService, paymentService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -24,6 +24,11 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentFrequency, setPaymentFrequency] = useState<'monthly' | 'quarterly' | 'biannual' | 'annual'>('monthly');
   const [currentPaymentConfig, setCurrentPaymentConfig] = useState<any>(null);
+  const [paymentStartDate, setPaymentStartDate] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDay, setTempDay] = useState(1);
+  const [tempMonth, setTempMonth] = useState(0);
+  const [tempYear, setTempYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     loadClientDetails();
@@ -76,7 +81,8 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
     }
     
     try {
-      await paymentService.configurePayment(clientId, amount, paymentFrequency);
+      const startDateStr = paymentStartDate.toISOString().split('T')[0];
+      await paymentService.configurePayment(clientId, amount, paymentFrequency, startDateStr);
       showSuccess('Éxito', 'Sistema de pagos configurado');
       setPaymentModalVisible(false);
       loadPaymentConfig();
@@ -84,6 +90,67 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
       showError('Error', 'No se pudo configurar el sistema de pagos');
     }
   };
+
+  const getDefaultStartDate = (frequency: string): Date => {
+    const today = new Date();
+    const result = new Date(today);
+    
+    switch (frequency) {
+      case 'monthly':
+        result.setMonth(result.getMonth() + 1);
+        break;
+      case 'quarterly':
+        result.setMonth(result.getMonth() + 3);
+        break;
+      case 'biannual':
+        result.setMonth(result.getMonth() + 6);
+        break;
+      case 'annual':
+        result.setFullYear(result.getFullYear() + 1);
+        break;
+    }
+    
+    return result;
+  };
+
+  const handleFrequencyChange = (freq: 'monthly' | 'quarterly' | 'biannual' | 'annual') => {
+    setPaymentFrequency(freq);
+    const newDate = getDefaultStartDate(freq);
+    setPaymentStartDate(newDate);
+    setTempDay(newDate.getDate());
+    setTempMonth(newDate.getMonth());
+    setTempYear(newDate.getFullYear());
+  };
+
+  const formatDate = (date: Date): string => {
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const openDatePicker = () => {
+    setTempDay(paymentStartDate.getDate());
+    setTempMonth(paymentStartDate.getMonth());
+    setTempYear(paymentStartDate.getFullYear());
+    setShowDatePicker(true);
+  };
+
+  const confirmDate = () => {
+    const newDate = new Date(tempYear, tempMonth, tempDay);
+    setPaymentStartDate(newDate);
+    setShowDatePicker(false);
+  };
+
+  const getDaysInMonth = (month: number, year: number) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  const months = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
 
   const getFrequencyLabel = (freq: string) => {
     const labels: { [key: string]: string } = {
@@ -254,7 +321,7 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
               <View style={styles.pickerContainer}>
                 <Picker
                   selectedValue={paymentFrequency}
-                  onValueChange={(value) => setPaymentFrequency(value)}
+                  onValueChange={(value) => handleFrequencyChange(value)}
                   style={styles.picker}
                 >
                   <Picker.Item label="Mensual" value="monthly" />
@@ -264,10 +331,17 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
                 </Picker>
               </View>
               
+              <Text style={styles.modalLabel}>Fecha del Primer Pago</Text>
+              <TouchableOpacity 
+                style={styles.dateButton}
+                onPress={openDatePicker}
+              >
+                <Ionicons name="calendar-outline" size={20} color={palette.primary} />
+                <Text style={styles.dateButtonText}>{formatDate(paymentStartDate)}</Text>
+              </TouchableOpacity>
+              
               <Text style={styles.modalHint}>
-                {currentPaymentConfig 
-                  ? 'Actualizar el sistema creará un nuevo registro de pago' 
-                  : 'Al configurar se registrará el primer pago automáticamente'}
+                El primer pago se cobrará el {formatDate(paymentStartDate)}
               </Text>
               
               <View style={styles.modalButtons}>
@@ -294,6 +368,73 @@ export default function ClientDetailsScreen({ route, navigation }: any) {
               </View>
             </View>
           </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Modal para seleccionar fecha */}
+      <Modal visible={showDatePicker} animationType="fade" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Seleccionar Fecha</Text>
+            
+            <Text style={styles.modalLabel}>Día</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={tempDay}
+                onValueChange={(value) => setTempDay(value)}
+                style={styles.picker}
+              >
+                {Array.from({ length: getDaysInMonth(tempMonth, tempYear) }, (_, i) => i + 1).map((day) => (
+                  <Picker.Item key={day} label={day.toString()} value={day} />
+                ))}
+              </Picker>
+            </View>
+            
+            <Text style={styles.modalLabel}>Mes</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={tempMonth}
+                onValueChange={(value) => {
+                  setTempMonth(value);
+                  const maxDay = getDaysInMonth(value, tempYear);
+                  if (tempDay > maxDay) setTempDay(maxDay);
+                }}
+                style={styles.picker}
+              >
+                {months.map((month, index) => (
+                  <Picker.Item key={index} label={month} value={index} />
+                ))}
+              </Picker>
+            </View>
+            
+            <Text style={styles.modalLabel}>Año</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={tempYear}
+                onValueChange={(value) => setTempYear(value)}
+                style={styles.picker}
+              >
+                {[2026, 2027, 2028, 2029, 2030].map((year) => (
+                  <Picker.Item key={year} label={year.toString()} value={year} />
+                ))}
+              </Picker>
+            </View>
+            
+            <View style={[styles.modalButtons, { marginTop: spacing.lg }]}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setShowDatePicker(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalSaveBtn}
+                onPress={confirmDate}
+              >
+                <Text style={styles.modalSaveText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
 
@@ -472,5 +613,21 @@ const styles = StyleSheet.create({
   modalSaveText: {
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.inputBg,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: palette.border,
+    gap: spacing.sm,
+  },
+  dateButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: palette.text,
   },
 });

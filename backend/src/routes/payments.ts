@@ -38,8 +38,16 @@ router.post('/config', authenticateToken, async (req: Request, res: Response) =>
   try {
     await connection.beginTransaction();
     
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
     const start = startDate ? new Date(startDate) : new Date();
-    const nextPayment = calculateNextPaymentDate(start, frequency);
+    start.setHours(0, 0, 0, 0);
+    
+    // Si la fecha de inicio es futura, el próximo pago es en esa fecha
+    // Si la fecha de inicio es hoy o pasada, calcular siguiente período
+    const isFutureDate = start > today;
+    const nextPayment = isFutureDate ? new Date(start) : calculateNextPaymentDate(start, frequency);
     
     // Verificar si ya existe configuración
     const [existing] = await connection.query(
@@ -76,15 +84,18 @@ router.post('/config', authenticateToken, async (req: Request, res: Response) =>
       configResult = Array.isArray(inserted) && inserted.length > 0 ? inserted[0] : null;
     }
     
-    // Registrar el primer pago en el histórico
-    const periodEnd = new Date(nextPayment);
-    periodEnd.setDate(periodEnd.getDate() - 1);
-    
-    await connection.query(
-      `INSERT INTO payment_history (user_id, amount, payment_date, period_start, period_end, frequency, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [userId, amount, start, start, periodEnd, frequency, 'Configuración inicial del sistema de pagos']
-    );
+    // Solo registrar el primer pago si la fecha de inicio NO es futura
+    // (es decir, si el cliente ya pagó hoy o ya estaba pagando)
+    if (!isFutureDate) {
+      const periodEnd = new Date(nextPayment);
+      periodEnd.setDate(periodEnd.getDate() - 1);
+      
+      await connection.query(
+        `INSERT INTO payment_history (user_id, amount, payment_date, period_start, period_end, frequency, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [userId, amount, start, start, periodEnd, frequency, 'Configuración inicial del sistema de pagos']
+      );
+    }
     
     await connection.commit();
     
