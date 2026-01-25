@@ -37,8 +37,10 @@ export default function AdminDashboard({ navigation }: any) {
     setLoading(true);
     try {
       const data = await paymentService.getClientsPaymentStatus();
-      setClients(data.clients);
+      setClients(data?.clients || []);
     } catch (error: any) {
+      console.error('Error loading clients:', error);
+      setClients([]);
       showError('Error', 'No se pudieron cargar los clientes');
     } finally {
       setLoading(false);
@@ -48,9 +50,10 @@ export default function AdminDashboard({ navigation }: any) {
   const loadPendingClients = async () => {
     try {
       const data = await clientService.getClients(true);
-      setPendingClients(data.clients);
+      setPendingClients(data?.clients || []);
     } catch (error: any) {
       console.error('Error loading pending clients:', error);
+      setPendingClients([]);
     }
   };
 
@@ -187,7 +190,7 @@ export default function AdminDashboard({ navigation }: any) {
     return null;
   };
 
-  const calculateDaysUntilPayment = (dateStr?: string) => {
+  const calculateDaysUntilPayment = (dateStr?: string): { text: string; isOverdue: boolean; isDue: boolean } | null => {
     if (!dateStr) return null;
     const date = new Date(dateStr);
     const today = new Date();
@@ -198,17 +201,17 @@ export default function AdminDashboard({ navigation }: any) {
     const diffDays = Math.ceil((paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     
     if (diffDays < 0) {
-      return { text: `Hace ${Math.abs(diffDays)} días`, isOverdue: true };
+      return { text: `Hace ${Math.abs(diffDays)} días`, isOverdue: true, isDue: false };
     } else if (diffDays === 0) {
       return { text: 'Hoy', isOverdue: false, isDue: true };
     } else if (diffDays === 1) {
-      return { text: 'Mañana', isOverdue: false };
+      return { text: 'Mañana', isOverdue: false, isDue: false };
     } else if (diffDays <= 7) {
-      return { text: `En ${diffDays} días`, isOverdue: false };
+      return { text: `En ${diffDays} días`, isOverdue: false, isDue: false };
     } else {
       const day = date.getDate();
       const month = date.toLocaleDateString('es-ES', { month: 'short' });
-      return { text: `${day} ${month}`, isOverdue: false };
+      return { text: `${day} ${month}`, isOverdue: false, isDue: false };
     }
   };
 
@@ -249,9 +252,7 @@ export default function AdminDashboard({ navigation }: any) {
             size={18} 
             color={activeTab === 'clients' ? palette.primary : palette.muted} 
           />
-          <Text style={[styles.tabText, activeTab === 'clients' && styles.tabTextActive]}>
-            Clientes
-          </Text>
+          <Text style={[styles.tabText, activeTab === 'clients' && styles.tabTextActive]}>Clientes</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.tab, activeTab === 'pending' && styles.tabActive]}
@@ -262,9 +263,7 @@ export default function AdminDashboard({ navigation }: any) {
             size={18} 
             color={activeTab === 'pending' ? palette.primary : palette.muted} 
           />
-          <Text style={[styles.tabText, activeTab === 'pending' && styles.tabTextActive]}>
-            Pendientes
-          </Text>
+          <Text style={[styles.tabText, activeTab === 'pending' && styles.tabTextActive]}>Pendientes</Text>
           {pendingCount > 0 && (
             <View style={styles.pendingBadge}>
               <Text style={styles.pendingBadgeText}>{pendingCount}</Text>
@@ -305,9 +304,7 @@ export default function AdminDashboard({ navigation }: any) {
               size={16} 
               color={sortType === 'alphabetic' ? palette.text : palette.muted} 
             />
-            <Text style={[styles.filterText, sortType === 'alphabetic' && styles.filterTextActive]}>
-              A-Z
-            </Text>
+            <Text style={[styles.filterText, sortType === 'alphabetic' && styles.filterTextActive]}>A-Z</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.filterButton, sortType === 'review' && styles.filterButtonActive]}
@@ -318,9 +315,7 @@ export default function AdminDashboard({ navigation }: any) {
               size={16} 
               color={sortType === 'review' ? palette.text : palette.muted} 
             />
-            <Text style={[styles.filterText, sortType === 'review' && styles.filterTextActive]}>
-              Próx. revisión
-            </Text>
+            <Text style={[styles.filterText, sortType === 'review' && styles.filterTextActive]}>Próx. revisión</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.filterButton, sortType === 'payment' && styles.filterButtonActive]}
@@ -331,9 +326,7 @@ export default function AdminDashboard({ navigation }: any) {
               size={16} 
               color={sortType === 'payment' ? palette.text : palette.muted} 
             />
-            <Text style={[styles.filterText, sortType === 'payment' && styles.filterTextActive]}>
-              Próx. pago
-            </Text>
+            <Text style={[styles.filterText, sortType === 'payment' && styles.filterTextActive]}>Próx. pago</Text>
           </TouchableOpacity>
         </View>
 
@@ -371,17 +364,17 @@ export default function AdminDashboard({ navigation }: any) {
             const isBlocked = item.is_enabled === false;
             const reviewInfo = formatReviewDate(item.next_due_date);
             const paymentInfo = formatPaymentDate(item.next_payment_date, item.days_until_payment);
-            const hasPaymentDue = item.payment_due && item.active;
+            const hasPaymentDue = Boolean(item.payment_due && item.active);
             
             // Calcular si la revisión es en menos de 5 días
-            const isReviewSoon = item.next_due_date && !isBlocked ? (() => {
+            const isReviewSoon = Boolean(item.next_due_date && !isBlocked && (() => {
               const today = new Date();
               today.setHours(0, 0, 0, 0);
-              const reviewDate = new Date(item.next_due_date);
+              const reviewDate = new Date(item.next_due_date!);
               reviewDate.setHours(0, 0, 0, 0);
               const diffDays = Math.ceil((reviewDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
               return diffDays >= 0 && diffDays < 5;
-            })() : false;
+            })());
             
             return (
               <TouchableOpacity
@@ -437,7 +430,7 @@ export default function AdminDashboard({ navigation }: any) {
                       </Text>
                     </View>
                   )}
-                  {!isBlocked && (() => {
+                  {!isBlocked ? (() => {
                     const daysUntilPayment = calculateDaysUntilPayment(item.next_payment_date);
                     if (!daysUntilPayment) return null;
                     return (
@@ -460,7 +453,7 @@ export default function AdminDashboard({ navigation }: any) {
                         </Text>
                       </View>
                     );
-                  })()}
+                  })() : null}
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={palette.muted} />
               </TouchableOpacity>
@@ -477,7 +470,6 @@ export default function AdminDashboard({ navigation }: any) {
         />
         </>
         ) : (
-          /* Tab de Pendientes */
           <>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionHeaderLeft}>

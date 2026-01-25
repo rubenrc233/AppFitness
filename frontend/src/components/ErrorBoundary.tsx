@@ -42,7 +42,7 @@ class ErrorBoundary extends Component<Props, State> {
               La aplicación encontró un error inesperado.
             </Text>
             
-            {__DEV__ && this.state.error && (
+            {this.state.error && (
               <ScrollView style={styles.errorContainer}>
                 <Text style={styles.errorTitle}>Error:</Text>
                 <Text style={styles.errorText}>{this.state.error.toString()}</Text>

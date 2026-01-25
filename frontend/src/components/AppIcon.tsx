@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  Banknote,
   Bookmark,
   Building2,
   Calendar,
@@ -16,6 +17,7 @@ import {
   ChevronUp,
   ChevronDown,
   Clock,
+  DollarSign,
   Dumbbell,
   FileText,
   Flame,
@@ -109,8 +111,11 @@ const ICONS: Record<string, LucideIconComponent> = {
   'building-outline': Building2,
 
   // Finance
+  cash: Banknote,
+  'cash-outline': Banknote,
   wallet: Wallet,
   'wallet-outline': Wallet,
+  'dollar-sign': DollarSign,
 
   // Filtering / Organization
   funnel: Filter,

@@ -1,7 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { palette, spacing } from '../theme';
 import { AppIcon } from './AppIcon';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width } = Dimensions.get('window');
 
 interface LoadingScreenProps {
   message?: string;
@@ -9,104 +12,190 @@ interface LoadingScreenProps {
 
 export default function LoadingScreen({ message }: LoadingScreenProps) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0.3)).current;
+  const glowAnim = useRef(new Animated.Value(0.2)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const fadeIn = useRef(new Animated.Value(0)).current;
+  const slideUp = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
-    // Animación de pulso
+    // Fade in inicial
+    Animated.parallel([
+      Animated.timing(fadeIn, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideUp, {
+        toValue: 0,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Animación de pulso suave
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 800,
+          toValue: 1.08,
+          duration: 1200,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 800,
+          duration: 1200,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ])
     ).start();
 
-    // Animación de brillo
+    // Animación de brillo elegante
     Animated.loop(
       Animated.sequence([
         Animated.timing(glowAnim, {
-          toValue: 0.6,
-          duration: 1000,
+          toValue: 0.5,
+          duration: 1500,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(glowAnim, {
-          toValue: 0.3,
-          duration: 1000,
+          toValue: 0.2,
+          duration: 1500,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ])
     ).start();
+
+    // Rotación sutil del anillo exterior
+    Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 8000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
   }, []);
+
+  const spin = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
+      {/* Fondo con gradiente sutil */}
+      <LinearGradient
+        colors={['#F8FAFC', '#E0F2FE', '#F0F9FF']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      
+      {/* Círculos decorativos de fondo */}
+      <View style={styles.backgroundCircle1} />
+      <View style={styles.backgroundCircle2} />
+
+      <Animated.View 
+        style={[
+          styles.content,
+          { 
+            opacity: fadeIn,
+            transform: [{ translateY: slideUp }]
+          }
+        ]}
+      >
+        {/* Anillo giratorio exterior */}
+        <Animated.View 
+          style={[
+            styles.spinRing,
+            { transform: [{ rotate: spin }] }
+          ]}
+        />
+        
+        {/* Glow animado */}
         <Animated.View 
           style={[
             styles.glowCircle,
             { opacity: glowAnim }
           ]}
         />
+        
+        {/* Logo principal */}
         <Animated.View 
           style={[
             styles.logoContainer,
             { transform: [{ scale: pulseAnim }] }
           ]}
         >
-          <AppIcon name="building" size={60} color={palette.primary} strokeWidth={2.5} />
+          <LinearGradient
+            colors={[palette.primary, palette.accent]}
+            style={styles.logoGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <AppIcon name="building" size={48} color="#FFFFFF" strokeWidth={2} />
+          </LinearGradient>
         </Animated.View>
         
+        {/* Nombre de la app */}
         <Text style={styles.title}>HypertrOffice</Text>
+        <Text style={styles.subtitle}>Tu entrenador personal</Text>
         
-        <View style={styles.dotsContainer}>
-          <LoadingDot delay={0} />
-          <LoadingDot delay={200} />
-          <LoadingDot delay={400} />
+        {/* Loading bar moderna */}
+        <View style={styles.loadingBarContainer}>
+          <LoadingBar />
         </View>
         
         {message && <Text style={styles.message}>{message}</Text>}
+      </Animated.View>
+      
+      {/* Footer elegante */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Preparando tu experiencia...</Text>
       </View>
     </View>
   );
 }
 
-function LoadingDot({ delay }: { delay: number }) {
-  const opacity = useRef(new Animated.Value(0.3)).current;
+function LoadingBar() {
+  const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const animate = () => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(opacity, {
-            toValue: 1,
-            duration: 400,
-            delay,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacity, {
-            toValue: 0.3,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    };
-    animate();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(progress, {
+          toValue: 1,
+          duration: 1200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(progress, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
   }, []);
 
+  const translateX = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-width * 0.6, width * 0.6],
+  });
+
   return (
-    <Animated.View style={[styles.dot, { opacity }]} />
+    <View style={styles.loadingBar}>
+      <Animated.View 
+        style={[
+          styles.loadingBarProgress,
+          { transform: [{ translateX }] }
+        ]}
+      />
+    </View>
   );
 }
 
@@ -117,56 +206,108 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  backgroundCircle1: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: palette.primaryGlow,
+    top: -50,
+    right: -100,
+  },
+  backgroundCircle2: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: palette.accentMuted,
+    bottom: 100,
+    left: -80,
+    opacity: 0.3,
+  },
   content: {
     alignItems: 'center',
   },
+  spinRing: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    borderTopColor: palette.primary,
+    borderRightColor: palette.primaryLight,
+    top: -20,
+  },
   glowCircle: {
     position: 'absolute',
-    width: 150,
-    height: 150,
-    borderRadius: 75,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
     backgroundColor: palette.primary,
-    top: -25,
+    top: -30,
   },
   logoContainer: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: palette.surface,
+    overflow: 'hidden',
+    shadowColor: palette.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  logoGradient: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: palette.primary,
-    shadowColor: palette.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 25,
-    elevation: 15,
-  },
-  fireLogo: {
-    fontSize: 60,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: palette.primary,
-    marginTop: spacing.lg,
-    letterSpacing: 3,
+    fontSize: 32,
+    fontWeight: '800',
+    color: palette.text,
+    marginTop: spacing.xl,
+    letterSpacing: 2,
   },
-  dotsContainer: {
-    flexDirection: 'row',
-    marginTop: spacing.lg,
-    gap: spacing.sm,
+  subtitle: {
+    fontSize: 14,
+    color: palette.muted,
+    marginTop: spacing.xs,
+    letterSpacing: 1,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  loadingBarContainer: {
+    marginTop: spacing.xl,
+    width: width * 0.5,
+    alignItems: 'center',
+  },
+  loadingBar: {
+    width: '100%',
+    height: 3,
+    backgroundColor: palette.border,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  loadingBarProgress: {
+    width: '40%',
+    height: '100%',
     backgroundColor: palette.primary,
+    borderRadius: 2,
   },
   message: {
     color: palette.muted,
     fontSize: 14,
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
+    textAlign: 'center',
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 60,
+  },
+  footerText: {
+    color: palette.mutedAlt,
+    fontSize: 12,
+    letterSpacing: 0.5,
   },
 });
