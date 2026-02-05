@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { AppIcon as Ionicons } from '../components/AppIcon';
 import { palette, spacing, radius } from '../theme';
@@ -40,11 +40,13 @@ export default function LoginScreen({ navigation }: any) {
       >
         <View style={styles.content}>
           <View style={styles.logoContainer}>
-            <View style={styles.logoCircle}>
-              <Ionicons name="building" size={50} color={palette.primary} />
-            </View>
-            <Text style={styles.title}>HypertrOffice</Text>
-            <Text style={styles.tagline}>Tu gimnasio, tu oficina</Text>
+            <Image 
+              source={require('../../assets/amf-logo.png')} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.title}>AMFTeam</Text>
+            <Text style={styles.tagline}>Tu equipo de entrenamiento</Text>
           </View>
 
           <View style={styles.formContainer}>
@@ -135,9 +137,9 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   logoCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: palette.surface,
     borderWidth: 3,
     borderColor: palette.primary,
@@ -149,6 +151,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     shadowRadius: 20,
     elevation: 10,
+  },
+  logo: {
+    width: 200,
+    height: 200,
+    marginBottom: spacing.md,
   },
   fireLogo: {
     fontSize: 56,

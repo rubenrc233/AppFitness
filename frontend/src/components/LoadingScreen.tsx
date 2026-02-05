@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, Dimensions, Image } from 'react-native';
 import { palette, spacing } from '../theme';
 import { AppIcon } from './AppIcon';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -89,7 +89,7 @@ export default function LoadingScreen({ message }: LoadingScreenProps) {
     <View style={styles.container}>
       {/* Fondo con gradiente sutil */}
       <LinearGradient
-        colors={['#F8FAFC', '#E0F2FE', '#F0F9FF']}
+        colors={[palette.background, '#151515', palette.background]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -131,18 +131,15 @@ export default function LoadingScreen({ message }: LoadingScreenProps) {
             { transform: [{ scale: pulseAnim }] }
           ]}
         >
-          <LinearGradient
-            colors={[palette.primary, palette.accent]}
-            style={styles.logoGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <AppIcon name="building" size={48} color="#FFFFFF" strokeWidth={2} />
-          </LinearGradient>
+          <Image 
+            source={require('../../assets/amf-logo.png')} 
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </Animated.View>
         
         {/* Nombre de la app */}
-        <Text style={styles.title}>HypertrOffice</Text>
+        <Text style={styles.title}>AMFTeam</Text>
         <Text style={styles.subtitle}>Tu entrenador personal</Text>
         
         {/* Loading bar moderna */}
@@ -248,15 +245,21 @@ const styles = StyleSheet.create({
     top: -30,
   },
   logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     overflow: 'hidden',
     shadowColor: palette.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
     elevation: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoImage: {
+    width: 120,
+    height: 120,
   },
   logoGradient: {
     width: '100%',

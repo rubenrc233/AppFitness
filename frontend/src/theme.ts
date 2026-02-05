@@ -1,30 +1,30 @@
-// Shared design tokens - Estética HypertrOffice (fondo claro, tonos azules cyan)
+// Shared design tokens - Estética AMFTeam (fondo oscuro, tonos naranja-marrón)
 export const palette = {
-  // Fondos claros
-  background: '#F8FAFC',
-  surface: '#FFFFFF',
-  surfaceAlt: '#F1F5F9',
-  surfaceHighlight: '#E0F2FE',
-  inputBg: '#F8FAFC',
-  headerBg: '#FFFFFF',
+  // Fondos oscuros
+  background: '#0A0A0A',
+  surface: '#1A1A1A',
+  surfaceAlt: '#252525',
+  surfaceHighlight: '#2D2520',
+  inputBg: '#1A1A1A',
+  headerBg: '#0A0A0A',
 
   // Bordes
-  border: '#E2E8F0',
-  borderLight: '#CBD5E1',
+  border: '#333333',
+  borderLight: '#404040',
 
-  // Marca - Tonos azules cyan
-  primary: '#06B6D4',
-  primaryLight: '#22D3EE',
-  primaryMuted: '#06B6D440',
-  primaryGlow: '#06B6D420',
-  accent: '#0EA5E9',
-  accentMuted: '#0EA5E940',
+  // Marca - Tonos naranja-marrón (del logo AMF)
+  primary: '#CD5C45',
+  primaryLight: '#E07055',
+  primaryMuted: '#CD5C4540',
+  primaryGlow: '#CD5C4520',
+  accent: '#D4694F',
+  accentMuted: '#D4694F40',
 
   // Texto
-  text: '#0F172A',
-  textWarm: '#1E293B',
-  muted: '#64748B',
-  mutedAlt: '#94A3B8',
+  text: '#F5F5F0',
+  textWarm: '#E8E4DC',
+  muted: '#9CA3AF',
+  mutedAlt: '#6B7280',
 
   // Estados
   success: '#10B981',
