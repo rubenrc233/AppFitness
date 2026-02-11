@@ -238,7 +238,7 @@ export default function AdminDashboard({ navigation }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>AMFTeam</Text>
+        <Text style={styles.headerTitle}>FitTrack</Text>
       </View>
 
       {/* Tabs */}

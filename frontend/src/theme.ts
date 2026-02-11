@@ -1,4 +1,4 @@
-// Shared design tokens - Estética AMFTeam (fondo oscuro, tonos naranja-marrón)
+// Shared design tokens - Estética FitTrack (fondo oscuro, tonos naranja-marrón)
 export const palette = {
   // Fondos oscuros
   background: '#0A0A0A',

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, Dimensions, Image } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { palette, spacing } from '../theme';
 import { AppIcon } from './AppIcon';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -131,16 +131,19 @@ export default function LoadingScreen({ message }: LoadingScreenProps) {
             { transform: [{ scale: pulseAnim }] }
           ]}
         >
-          <Image 
-            source={require('../../assets/amf-logo.png')} 
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
+          <LinearGradient
+            colors={[palette.primary, palette.accent]}
+            style={styles.logoGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <AppIcon name="barbell" size={48} color="#FFFFFF" strokeWidth={2} />
+          </LinearGradient>
         </Animated.View>
         
         {/* Nombre de la app */}
-        <Text style={styles.title}>AMFTeam</Text>
-        <Text style={styles.subtitle}>Tu entrenador personal</Text>
+        <Text style={styles.title}>FitTrack</Text>
+        <Text style={styles.subtitle}>Tu progreso, tu éxito</Text>
         
         {/* Loading bar moderna */}
         <View style={styles.loadingBarContainer}>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { AppIcon as Ionicons } from '../components/AppIcon';
 import { palette, spacing, radius } from '../theme';
@@ -40,13 +40,11 @@ export default function LoginScreen({ navigation }: any) {
       >
         <View style={styles.content}>
           <View style={styles.logoContainer}>
-            <Image 
-              source={require('../../assets/amf-logo.png')} 
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.title}>AMFTeam</Text>
-            <Text style={styles.tagline}>Tu equipo de entrenamiento</Text>
+            <View style={styles.logoCircle}>
+              <Ionicons name="barbell" size={60} color={palette.primary} />
+            </View>
+            <Text style={styles.title}>FitTrack</Text>
+            <Text style={styles.tagline}>Tu progreso, tu éxito</Text>
           </View>
 
           <View style={styles.formContainer}>
