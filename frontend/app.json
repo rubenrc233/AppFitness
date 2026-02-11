@@ -15,7 +15,16 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rubenrubio.fittrack",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "La aplicación necesita acceso a tu cámara para tomar fotos de progreso.",
+        "NSPhotoLibraryUsageDescription": "La aplicación necesita acceso a tus fotos para subir actualizaciones de progreso.",
+        "NSPhotoLibraryAddUsageDescription": "La aplicación necesita permiso para guardar fotos en tu biblioteca.",
+        "NSMotionUsageDescription": "La aplicación utiliza el sensor de movimiento para contar tus pasos.",
+        "NSMicrophoneUsageDescription": "La aplicación puede necesitar acceso al micrófono para grabar audio."
+      }
     },
     "android": {
       "adaptiveIcon": {
