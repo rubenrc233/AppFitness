@@ -5,26 +5,11 @@ import { AuthRequest, authenticateToken, isAdmin } from '../middleware/auth';
 
 const router = Router();
 
-// Get all exercises from library (includes system and custom)
+// Get all exercises from library
 router.get('/library', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const [exercises] = await pool.query<RowDataPacket[]>(
-      `SELECT 
-        e.id,
-        e.name,
-        e.muscle_group,
-        e.description,
-        'system' as type
-      FROM exercises_library e
-      UNION ALL
-      SELECT 
-        ce.id,
-        ce.name,
-        ce.muscle_group,
-        ce.description,
-        'custom' as type
-      FROM custom_exercises ce
-      ORDER BY name`
+      `SELECT id, name, muscle_group, description FROM exercise_library ORDER BY muscle_group, name`
     );
     res.json(exercises);
   } catch (error) {
@@ -33,7 +18,7 @@ router.get('/library', authenticateToken, async (req: AuthRequest, res: Response
   }
 });
 
-// Create custom exercise (admin only)
+// Create custom exercise (admin only) - inserts into exercise_library so it can be used in routines
 router.post('/custom', authenticateToken, isAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { name, muscle_group, description } = req.body;
@@ -43,13 +28,19 @@ router.post('/custom', authenticateToken, isAdmin, async (req: AuthRequest, res:
     }
 
     const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO custom_exercises (name, muscle_group, description, created_by) VALUES (?, ?, ?, ?)',
-      [name, muscle_group, description || '', req.userId]
+      'INSERT INTO exercise_library (name, muscle_group, description) VALUES (?, ?, ?)',
+      [name, muscle_group, description || '']
     );
 
     res.status(201).json({
       message: 'Custom exercise created',
-      exerciseId: result.insertId
+      exerciseId: result.insertId,
+      exercise: {
+        id: result.insertId,
+        name,
+        muscle_group,
+        description: description || ''
+      }
     });
   } catch (error) {
     console.error('Create custom exercise error:', error);
@@ -57,15 +48,15 @@ router.post('/custom', authenticateToken, isAdmin, async (req: AuthRequest, res:
   }
 });
 
-// Update exercise (admin only)
+// Update exercise in library (admin only)
 router.put('/:exerciseId', authenticateToken, isAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { exerciseId } = req.params;
-    const { exercise_name, sets, reps, notes, day } = req.body;
+    const { name, muscle_group, description } = req.body;
 
     await pool.query(
-      'UPDATE exercises SET exercise_name = ?, sets = ?, reps = ?, notes = ?, day = ? WHERE id = ?',
-      [exercise_name, sets || null, reps || null, notes || '', day || 'Monday', exerciseId]
+      'UPDATE exercise_library SET name = ?, muscle_group = ?, description = ? WHERE id = ?',
+      [name, muscle_group, description || '', exerciseId]
     );
 
     res.json({ message: 'Exercise updated successfully' });
@@ -75,12 +66,12 @@ router.put('/:exerciseId', authenticateToken, isAdmin, async (req: AuthRequest, 
   }
 });
 
-// Delete exercise (admin only)
+// Delete exercise from library (admin only)
 router.delete('/:exerciseId', authenticateToken, isAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { exerciseId } = req.params;
 
-    await pool.query('DELETE FROM exercises WHERE id = ?', [exerciseId]);
+    await pool.query('DELETE FROM exercise_library WHERE id = ?', [exerciseId]);
 
     res.json({ message: 'Exercise deleted successfully' });
   } catch (error) {

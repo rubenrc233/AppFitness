@@ -90,4 +90,43 @@ router.post('/save', authenticateToken, async (req, res) => {
   }
 });
 
+// Historial de un ejercicio específico (para gráficas de progreso)
+router.get('/history/:clientId/:dayExerciseId', authenticateToken, async (req, res) => {
+  try {
+    const clientId = parseInt(req.params.clientId);
+    const dayExerciseId = parseInt(req.params.dayExerciseId);
+
+    const [logs] = await pool.query<RowDataPacket[]>(
+      `SELECT 
+        wl.set_number,
+        wl.weight,
+        DATE(wl.completed_at) as date
+      FROM workout_logs wl
+      WHERE wl.client_id = ? 
+        AND wl.day_exercise_id = ?
+      ORDER BY wl.completed_at ASC`,
+      [clientId, dayExerciseId]
+    );
+
+    // Agrupar por fecha y calcular el peso máximo de cada sesión
+    const sessionMap: { [date: string]: number } = {};
+    logs.forEach(log => {
+      const dateStr = new Date(log.date).toISOString().split('T')[0];
+      if (!sessionMap[dateStr] || log.weight > sessionMap[dateStr]) {
+        sessionMap[dateStr] = log.weight;
+      }
+    });
+
+    const history = Object.entries(sessionMap).map(([date, maxWeight]) => ({
+      date,
+      maxWeight,
+    }));
+
+    res.json(history);
+  } catch (error) {
+    console.error('Error getting exercise history:', error);
+    res.status(500).json({ error: 'Error al obtener el historial del ejercicio' });
+  }
+});
+
 export default router;

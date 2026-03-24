@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,19 @@ import {
   TextInput,
   Modal,
   AppState,
+  Dimensions,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LineChart } from 'react-native-chart-kit';
 import { AppIcon as Ionicons } from '../components/AppIcon';
 import LoadingScreen from '../components/LoadingScreen';
 import { routineService, workoutService } from '../services/api';
 import { DayExercise } from '../types';
 import { palette, spacing, radius, typography } from '../theme';
+
+const CACHE_KEY_PREFIX = 'workout_cache_';
 
 interface Props {
   route: any;
@@ -22,9 +29,11 @@ interface Props {
 
 export default function WorkoutScreen({ route, navigation }: Props) {
   const { clientId, dayId, dayIndex, dayName } = route.params;
+  const cacheKey = `${CACHE_KEY_PREFIX}${clientId}_${dayId}`;
 
   const [exercises, setExercises] = useState<DayExercise[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [currentWeights, setCurrentWeights] = useState<{ [exerciseId: number]: { [setNum: number]: string } }>({});
   const [previousWeights, setPreviousWeights] = useState<{ [exerciseId: number]: { [setNum: number]: number } }>({});
   const [workoutSeconds, setWorkoutSeconds] = useState(0);
@@ -32,14 +41,65 @@ export default function WorkoutScreen({ route, navigation }: Props) {
   const [restSeconds, setRestSeconds] = useState(0);
   const [restRunning, setRestRunning] = useState(false);
   const [finishModalVisible, setFinishModalVisible] = useState(false);
+
+  // Progress chart state
+  const [chartModalVisible, setChartModalVisible] = useState(false);
+  const [chartData, setChartData] = useState<{ date: string; maxWeight: number }[]>([]);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [chartExerciseName, setChartExerciseName] = useState('');
   
   const workoutStartTimeRef = useRef<number>(Date.now());
   const restStartTimeRef = useRef<number | null>(null);
   const appState = useRef(AppState.currentState);
 
+  // --- Cache helpers ---
+  const saveCache = useCallback(async (weights: typeof currentWeights, startTime: number) => {
+    try {
+      const data = {
+        currentWeights: weights,
+        workoutStartTime: startTime,
+        savedAt: Date.now(),
+      };
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(data));
+    } catch (e) {
+      // silent
+    }
+  }, [cacheKey]);
+
+  const loadCache = useCallback(async () => {
+    try {
+      const raw = await AsyncStorage.getItem(cacheKey);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      // Expire cache after 6 hours
+      if (Date.now() - data.savedAt > 6 * 60 * 60 * 1000) {
+        await AsyncStorage.removeItem(cacheKey);
+        return null;
+      }
+      return data as { currentWeights: typeof currentWeights; workoutStartTime: number };
+    } catch {
+      return null;
+    }
+  }, [cacheKey]);
+
+  const clearCache = useCallback(async () => {
+    try {
+      await AsyncStorage.removeItem(cacheKey);
+    } catch {
+      // silent
+    }
+  }, [cacheKey]);
+
   useEffect(() => {
     loadWorkout();
   }, []);
+
+  // Save to cache whenever weights change
+  useEffect(() => {
+    if (!loading && workoutStarted) {
+      saveCache(currentWeights, workoutStartTimeRef.current);
+    }
+  }, [currentWeights, loading, workoutStarted]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
@@ -98,14 +158,23 @@ export default function WorkoutScreen({ route, navigation }: Props) {
       const lastWorkout = await workoutService.getLastWorkout(clientId, dayId);
       setPreviousWeights(lastWorkout);
 
-      const initialWeights: { [exerciseId: number]: { [setNum: number]: string } } = {};
-      exercisesList.forEach((exercise: any) => {
-        initialWeights[exercise.id] = {};
-        for (let i = 1; i <= exercise.sets; i++) {
-          initialWeights[exercise.id][i] = '';
-        }
-      });
-      setCurrentWeights(initialWeights);
+      // Try to restore from cache
+      const cached = await loadCache();
+      if (cached) {
+        setCurrentWeights(cached.currentWeights);
+        workoutStartTimeRef.current = cached.workoutStartTime;
+        const elapsed = Math.floor((Date.now() - cached.workoutStartTime) / 1000);
+        setWorkoutSeconds(elapsed);
+      } else {
+        const initialWeights: { [exerciseId: number]: { [setNum: number]: string } } = {};
+        exercisesList.forEach((exercise: any) => {
+          initialWeights[exercise.id] = {};
+          for (let i = 1; i <= exercise.sets; i++) {
+            initialWeights[exercise.id][i] = '';
+          }
+        });
+        setCurrentWeights(initialWeights);
+      }
     } catch (error) {
       console.error('Error loading workout:', error);
     } finally {
@@ -166,7 +235,9 @@ export default function WorkoutScreen({ route, navigation }: Props) {
   };
 
   const handleFinishWorkout = async () => {
+    if (saving) return;
     try {
+      setSaving(true);
       const exercisesData = exercises.map((exercise) => ({
         dayExerciseId: exercise.id,
         sets: Object.entries(currentWeights[exercise.id] || {}).map(([setNum, weight]) => ({
@@ -176,9 +247,29 @@ export default function WorkoutScreen({ route, navigation }: Props) {
       }));
 
       await workoutService.saveWorkout(clientId, dayId, exercisesData);
+      await clearCache();
+      setFinishModalVisible(false);
       navigation.goBack();
     } catch (error) {
       console.error('Error saving workout:', error);
+      Alert.alert('Error', 'No se pudo guardar el entrenamiento. Inténtalo de nuevo.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleShowProgress = async (exercise: DayExercise) => {
+    try {
+      setChartExerciseName(exercise.exercise_name);
+      setChartLoading(true);
+      setChartModalVisible(true);
+      const history = await workoutService.getExerciseHistory(clientId, exercise.id);
+      setChartData(history);
+    } catch (error) {
+      console.error('Error loading history:', error);
+      setChartData([]);
+    } finally {
+      setChartLoading(false);
     }
   };
 
@@ -210,15 +301,15 @@ export default function WorkoutScreen({ route, navigation }: Props) {
               <Ionicons name="flame" size={22} color={palette.primary} />
             </View>
             <View style={styles.timerContent}>
-              <Text style={styles.timerLabel}>TIEMPO ACTIVO</Text>
-              <Text style={styles.timerDisplayMain}>{formatTime(workoutSeconds)}</Text>
+              <Text style={styles.timerLabel} numberOfLines={1}>TIEMPO ACTIVO</Text>
+              <Text style={styles.timerDisplayMain} numberOfLines={1} adjustsFontSizeToFit>{formatTime(workoutSeconds)}</Text>
             </View>
           </View>
 
           <View style={styles.timerContainer}>
             <View style={styles.timerContentRest}>
-              <Text style={styles.timerLabelRest}>DESCANSO</Text>
-              <Text style={styles.timerDisplayRest}>{formatRestTime(restSeconds)}</Text>
+              <Text style={styles.timerLabelRest} numberOfLines={1}>DESCANSO</Text>
+              <Text style={styles.timerDisplayRest} numberOfLines={1} adjustsFontSizeToFit>{formatRestTime(restSeconds)}</Text>
             </View>
             <View style={styles.timerControls}>
               <TouchableOpacity 
@@ -252,6 +343,12 @@ export default function WorkoutScreen({ route, navigation }: Props) {
                   <Text style={styles.repsText}>{exercise.reps} reps</Text>
                 </View>
               </View>
+              <TouchableOpacity
+                style={styles.progressButton}
+                onPress={() => handleShowProgress(exercise)}
+              >
+                <Ionicons name="trending-up" size={18} color={palette.primary} />
+              </TouchableOpacity>
             </View>
             
             {exercise.notes && (
@@ -336,10 +433,78 @@ export default function WorkoutScreen({ route, navigation }: Props) {
               <TouchableOpacity style={styles.modalButtonCancel} onPress={handleCancelFinish}>
                 <Text style={styles.modalButtonCancelText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalButtonConfirm} onPress={handleFinishWorkout}>
-                <Text style={styles.modalButtonConfirmText}>Guardar</Text>
+              <TouchableOpacity style={styles.modalButtonConfirm} onPress={handleFinishWorkout} disabled={saving}>
+                {saving ? (
+                  <ActivityIndicator size="small" color={palette.text} />
+                ) : (
+                  <Text style={styles.modalButtonConfirmText}>Guardar</Text>
+                )}
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal: Progress Chart */}
+      <Modal visible={chartModalVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.chartModalContainer}>
+            <View style={styles.chartModalHeader}>
+              <Text style={styles.chartModalTitle} numberOfLines={2}>{chartExerciseName}</Text>
+              <TouchableOpacity onPress={() => setChartModalVisible(false)} style={styles.chartCloseButton}>
+                <Ionicons name="close" size={22} color={palette.text} />
+              </TouchableOpacity>
+            </View>
+            {chartLoading ? (
+              <View style={styles.chartLoadingContainer}>
+                <ActivityIndicator size="large" color={palette.primary} />
+                <Text style={styles.chartLoadingText}>Cargando historial...</Text>
+              </View>
+            ) : chartData.length < 2 ? (
+              <View style={styles.chartEmptyContainer}>
+                <Ionicons name="bar-chart" size={48} color={palette.mutedAlt} />
+                <Text style={styles.chartEmptyText}>
+                  {chartData.length === 0
+                    ? 'Sin datos de entrenamientos anteriores'
+                    : 'Se necesitan al menos 2 sesiones para mostrar la gráfica'}
+                </Text>
+              </View>
+            ) : (
+              <View>
+                <Text style={styles.chartSubtitle}>Peso máximo por sesión (kg)</Text>
+                <LineChart
+                  data={{
+                    labels: chartData.map(d => {
+                      const parts = d.date.split('-');
+                      return `${parts[2]}/${parts[1]}`;
+                    }),
+                    datasets: [{ data: chartData.map(d => d.maxWeight) }],
+                  }}
+                  width={Dimensions.get('window').width - 80}
+                  height={220}
+                  yAxisSuffix=" kg"
+                  chartConfig={{
+                    backgroundColor: palette.surface,
+                    backgroundGradientFrom: palette.surface,
+                    backgroundGradientTo: palette.surfaceAlt,
+                    decimalPlaces: 1,
+                    color: (opacity = 1) => `rgba(205, 92, 69, ${opacity})`,
+                    labelColor: () => palette.muted,
+                    propsForDots: {
+                      r: '5',
+                      strokeWidth: '2',
+                      stroke: palette.primary,
+                    },
+                    propsForBackgroundLines: {
+                      strokeDasharray: '',
+                      stroke: palette.border,
+                    },
+                  }}
+                  bezier
+                  style={styles.chart}
+                />
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -411,12 +576,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: palette.surface,
     borderRadius: radius.md,
-    padding: spacing.md,
+    padding: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
     borderWidth: 1,
     borderColor: palette.border,
+    minWidth: 0,
   },
   timerMain: {
     borderLeftWidth: 3,
@@ -432,10 +598,13 @@ const styles = StyleSheet.create({
   },
   timerContent: {
     flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
   },
   timerContentRest: {
     flex: 1,
-    minWidth: 50,
+    flexShrink: 1,
+    minWidth: 0,
   },
   timerLabel: {
     color: palette.muted,
@@ -463,12 +632,13 @@ const styles = StyleSheet.create({
   },
   timerControls: {
     flexDirection: 'row',
-    gap: spacing.xs,
+    gap: 4,
+    flexShrink: 0,
   },
   timerButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: palette.primaryGlow,
     justifyContent: 'center',
     alignItems: 'center',
@@ -749,10 +919,85 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: palette.primary,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
   },
   modalButtonConfirmText: {
     color: palette.text,
     fontSize: 15,
     fontWeight: 'bold',
+  },
+  // Progress chart button
+  progressButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: palette.primaryGlow,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: palette.primaryMuted,
+  },
+  // Chart modal
+  chartModalContainer: {
+    backgroundColor: palette.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    width: '92%',
+    maxWidth: 420,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  chartModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  chartModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: palette.text,
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  chartCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: palette.surfaceAlt,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chartSubtitle: {
+    fontSize: 12,
+    color: palette.muted,
+    marginBottom: spacing.sm,
+  },
+  chart: {
+    borderRadius: radius.md,
+  },
+  chartLoadingContainer: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  chartLoadingText: {
+    color: palette.muted,
+    fontSize: 14,
+  },
+  chartEmptyContainer: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  chartEmptyText: {
+    color: palette.muted,
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

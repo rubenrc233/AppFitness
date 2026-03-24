@@ -124,8 +124,6 @@ const ICONS: Record<string, LucideIconComponent> = {
   'receipt-outline': Receipt,
   repeat: Repeat,
   'repeat-outline': Repeat,
-  'close-circle': XCircle,
-  'information-circle-outline': Circle,
 
   // Fitness / tracking
   flame: Flame,
