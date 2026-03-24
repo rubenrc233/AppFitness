@@ -278,6 +278,67 @@ router.put('/days/:dayId/exercises/reorder', authenticateToken, async (req, res)
   }
 });
 
+// Añadir días a una rutina existente (sin eliminar los actuales)
+router.post('/:routineId/days', authenticateToken, async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { routineId } = req.params;
+    const { currentDays, newTotal } = req.body;
+
+    if (!newTotal || newTotal < 1 || newTotal > 7 || newTotal <= currentDays) {
+      return res.status(400).json({ error: 'Número de días inválido' });
+    }
+
+    await connection.beginTransaction();
+
+    for (let i = currentDays + 1; i <= newTotal; i++) {
+      await connection.query(
+        'INSERT INTO routine_days (routine_id, day_number, weekday, name, notes) VALUES (?, ?, ?, ?, ?)',
+        [routineId, i, i - 1, `Día ${i}`, '']
+      );
+    }
+
+    await connection.commit();
+    res.json({ message: `${newTotal - currentDays} día(s) añadido(s)` });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error adding days:', error);
+    res.status(500).json({ error: 'Error al añadir días' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Eliminar los últimos días de una rutina (mantiene los primeros keepDays)
+router.delete('/:routineId/days', authenticateToken, async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { routineId } = req.params;
+    const { keepDays } = req.body;
+
+    if (!keepDays || keepDays < 1) {
+      return res.status(400).json({ error: 'Debe mantener al menos 1 día' });
+    }
+
+    await connection.beginTransaction();
+
+    // Eliminar días con day_number > keepDays (CASCADE eliminará ejercicios)
+    await connection.query(
+      'DELETE FROM routine_days WHERE routine_id = ? AND day_number > ?',
+      [routineId, keepDays]
+    );
+
+    await connection.commit();
+    res.json({ message: 'Días eliminados correctamente' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error removing days:', error);
+    res.status(500).json({ error: 'Error al eliminar días' });
+  } finally {
+    connection.release();
+  }
+});
+
 // Eliminar rutina completa
 router.delete('/:routineId', authenticateToken, async (req, res) => {
   try {

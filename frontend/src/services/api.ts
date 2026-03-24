@@ -224,6 +224,18 @@ export const routineService = {
     const response = await api.delete(`/routines/${routineId}`);
     return response.data;
   },
+
+  // Añadir días a una rutina existente
+  addDaysToRoutine: async (routineId: number, currentDays: number, newTotal: number) => {
+    const response = await api.post(`/routines/${routineId}/days`, { currentDays, newTotal });
+    return response.data;
+  },
+
+  // Eliminar los últimos días de una rutina
+  removeDaysFromRoutine: async (routineId: number, keepDays: number) => {
+    const response = await api.delete(`/routines/${routineId}/days`, { data: { keepDays } });
+    return response.data;
+  },
 };
 
 // Servicios para dietas
@@ -373,6 +385,12 @@ export const workoutService = {
       dayId,
       exercises
     });
+    return response.data;
+  },
+
+  // Historial de un ejercicio (para gráficas de progreso)
+  getExerciseHistory: async (clientId: number, dayExerciseId: number) => {
+    const response = await api.get(`/workouts/history/${clientId}/${dayExerciseId}`);
     return response.data;
   },
 };

@@ -8,7 +8,6 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
-  FlatList,
 } from 'react-native';
 
 import { AppIcon as Ionicons } from '../components/AppIcon';
@@ -339,6 +338,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
     setDayModalDirty(false);
     loadDayExercises(day.id);
     loadMuscleGroups();
+    setSelectedMuscleGroup('');
     loadExerciseLibrary();
     setSelectedExercise(null);
     setExerciseSets('3');
@@ -534,17 +534,17 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
         description: customExerciseDescription,
       });
 
-      showSuccess('Éxito', 'Ejercicio personalizado creado');
       setCreateExerciseModalVisible(false);
       setCustomExerciseName('');
       setCustomExerciseMuscleGroup('');
       setCustomExerciseDescription('');
-      loadExerciseLibrary(selectedMuscleGroup);
-      
-      // Volver al modal de editar día si hay uno seleccionado
-      if (selectedDay) {
-        setViewDayModalVisible(true);
-      }
+
+      // Recargar biblioteca completa (sin filtro) para que el nuevo ejercicio aparezca
+      setSelectedMuscleGroup('');
+      await loadMuscleGroups();
+      await loadExerciseLibrary();
+
+      showSuccess('Éxito', 'Ejercicio personalizado creado');
     } catch (error) {
       console.error('Error creating custom exercise:', error);
       showError('Error', 'No se pudo crear el ejercicio');
@@ -570,22 +570,46 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
     }
 
     try {
-      if (editTotalDays !== routine.days?.length) {
-        await routineService.deleteRoutine(routine.id);
-        await routineService.createRoutine(clientId, {
-          name: editRoutineName,
-          totalDays: editTotalDays,
-        });
-        showSuccess('Éxito', 'Rutina actualizada (días recreados)');
+      // Siempre actualizar el nombre
+      await routineService.updateRoutine(routine.id, {
+        name: editRoutineName,
+      });
+
+      const currentDays = routine.days?.length || 0;
+
+      if (editTotalDays > currentDays) {
+        // Añadir días nuevos sin eliminar los existentes
+        await routineService.addDaysToRoutine(routine.id, currentDays, editTotalDays);
+        showSuccess('Éxito', `Rutina actualizada. Se añadieron ${editTotalDays - currentDays} día(s).`);
+      } else if (editTotalDays < currentDays) {
+        // Confirmar antes de eliminar días
+        setEditRoutineModalVisible(false);
+        showConfirm(
+          'Reducir días',
+          `Se eliminarán los últimos ${currentDays - editTotalDays} día(s) y sus ejercicios. ¿Continuar?`,
+          async () => {
+            try {
+              hideAlert();
+              await routineService.removeDaysFromRoutine(routine.id, editTotalDays);
+              showSuccess('Éxito', 'Rutina actualizada');
+              await loadRoutine();
+            } catch (err) {
+              console.error('Error removing days:', err);
+              showError('Error', 'No se pudieron eliminar los días');
+            }
+          },
+          () => {
+            hideAlert();
+            setEditRoutineModalVisible(true);
+          }
+        );
+        return;
       } else {
-        await routineService.updateRoutine(routine.id, {
-          name: editRoutineName,
-        });
         showSuccess('Éxito', 'Rutina actualizada');
       }
 
       setEditRoutineModalVisible(false);
-      loadRoutine();
+      await loadRoutine();
     } catch (error) {
       console.error('Error updating routine:', error);
       showError('Error', 'No se pudo actualizar la rutina');
@@ -1130,7 +1154,7 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
             />
 
             <Text style={styles.label}>Número de días:</Text>
-            <Text style={styles.warningText}>Cambiar días recreará la rutina</Text>
+            <Text style={styles.warningText}>Añadir días no afecta a los existentes. Reducir eliminará los últimos días.</Text>
             <View style={styles.daysSelector}>
               {[1, 2, 3, 4, 5, 6, 7].map((num) => (
                 <TouchableOpacity
@@ -1315,7 +1339,6 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                   <TouchableOpacity
                     style={styles.wizardCreateCustomButton}
                     onPress={() => {
-                      setViewDayModalVisible(false);
                       setCreateExerciseModalVisible(true);
                     }}
                   >
@@ -1370,16 +1393,10 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                 </ScrollView>
 
                 {/* Exercise Library */}
-                <FlatList 
-                  style={styles.wizardExerciseLibrary}
-                  data={exerciseLibrary}
-                  keyExtractor={(item) => item.id.toString()}
-                  showsVerticalScrollIndicator={true}
-                  keyboardDismissMode="on-drag"
-                  keyboardShouldPersistTaps="handled"
-                  nestedScrollEnabled={true}
-                  renderItem={({ item: exercise }) => (
+                <View style={styles.wizardExerciseLibrary}>
+                  {exerciseLibrary.map((exercise) => (
                     <TouchableOpacity
+                      key={exercise.id}
                       style={styles.wizardLibraryItem}
                       onPress={() => handleAddExercise(exercise)}
                     >
@@ -1389,8 +1406,8 @@ export default function RoutineManagementScreen({ route, navigation }: Props) {
                       </View>
                       <Ionicons name="add-circle-outline" size={24} color={palette.primary} />
                     </TouchableOpacity>
-                  )}
-                />
+                  ))}
+                </View>
               </View>
             </View>
           </ScrollView>
@@ -2438,7 +2455,7 @@ const styles = StyleSheet.create({
   },
   wizardContentFlexContainer: {
     flexGrow: 1,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xl * 3,
   },
   wizardStepContainer: {
     paddingBottom: spacing.xl,
@@ -2797,7 +2814,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   wizardExerciseLibrary: {
-    height: 200,
     marginBottom: spacing.md,
   },
   wizardLibraryItem: {
