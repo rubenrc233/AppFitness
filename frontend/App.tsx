@@ -17,6 +17,7 @@ import ProgressHistoryScreen from './src/screens/ProgressHistoryScreen';
 import PaymentHistoryScreen from './src/screens/PaymentHistoryScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import PendingApprovalScreen from './src/screens/PendingApprovalScreen';
+import ExerciseLibraryScreen from './src/screens/ExerciseLibraryScreen';
 
 const Stack = createNativeStackNavigator<any>();
 
@@ -51,6 +52,7 @@ function Navigation() {
             }}
           />
           <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} />
+          <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
         </Stack.Navigator>
       ) : user.is_approved === false ? (

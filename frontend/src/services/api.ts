@@ -571,5 +571,39 @@ export const paymentService = {
   },
 };
 
+// Servicios para gestión de biblioteca de ejercicios (admin)
+export const exerciseLibraryService = {
+  // Obtener todos los ejercicios
+  getAll: async (muscleGroup?: string) => {
+    const params = muscleGroup ? { muscleGroup } : {};
+    const response = await api.get('/routines/library', { params });
+    return response.data;
+  },
+
+  // Obtener grupos musculares
+  getMuscleGroups: async () => {
+    const response = await api.get('/routines/muscle-groups');
+    return response.data;
+  },
+
+  // Crear ejercicio personalizado
+  create: async (data: { name: string; muscle_group: string; description?: string }) => {
+    const response = await api.post('/exercises/custom', data);
+    return response.data;
+  },
+
+  // Actualizar ejercicio
+  update: async (exerciseId: number, data: { name: string; muscle_group: string; description?: string }) => {
+    const response = await api.put(`/exercises/${exerciseId}`, data);
+    return response.data;
+  },
+
+  // Eliminar ejercicio
+  delete: async (exerciseId: number) => {
+    const response = await api.delete(`/exercises/${exerciseId}`);
+    return response.data;
+  },
+};
+
 export default api;
 

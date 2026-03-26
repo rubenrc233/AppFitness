@@ -533,6 +533,14 @@ export default function AdminDashboard({ navigation }: any) {
       <View style={styles.bottomMenu}>
         <TouchableOpacity
           style={styles.bottomMenuItem}
+          onPress={() => navigation.navigate('ExerciseLibrary')}
+        >
+          <Ionicons name="barbell" size={24} color={palette.text} />
+          <Text style={styles.bottomMenuText}>Ejercicios</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.bottomMenuItem}
           onPress={() => navigation.navigate('PaymentHistory')}
         >
           <Ionicons name="wallet" size={24} color={palette.text} />
